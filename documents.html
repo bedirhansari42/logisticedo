@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="tr" class="no-js" data-title-key="meta.appTitle">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Commercial invoice &amp; packing list oluşturucu — logisticedo</title>
+  <meta name="description" content="Proforma faturadan, kendi antetinizde commercial invoice ve packing list. PDF ve Excel çıktı. Dosyalar tarayıcınızdan çıkmaz.">
+  <meta name="theme-color" content="#1b1e21">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="modulepreload" href="assets/js/app/main.js">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body class="app-page">
+  <a class="visually-hidden" href="#main" data-i18n="nav.skip">İçeriğe geç</a>
+
+  <header class="site-header site-header--solid">
+    <div class="container">
+      <a class="brand" href="index.html" aria-label="logisticedo">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="bg1" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#00827c"/><stop offset="1" stop-color="#cbfffc"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="#2b3034"/><path d="M8 22c3.2-7.4 8.8-11.2 16-11.8" fill="none" stroke="url(#bg1)" stroke-width="2.4" stroke-linecap="round"/><circle cx="8" cy="22" r="2.8" fill="#cbfffc"/><circle cx="24" cy="10.2" r="2.8" fill="#00827c" stroke="#cbfffc" stroke-width="1.4"/></svg>
+        <span>logistic<b>edo</b></span>
+      </a>
+      <nav class="nav" id="siteNav">
+        <a href="index.html#how" data-i18n="nav.how">Nasıl çalışır</a>
+        <a href="index.html#privacy" data-i18n="nav.privacy">Gizlilik</a>
+      </nav>
+      <div class="header-actions">
+        <div class="lang-switch" role="group" aria-label="Dil / Language">
+          <button type="button" data-lang="tr">TR</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+        <button class="icon-btn icon-btn--plain menu-toggle" type="button" aria-expanded="false" aria-controls="siteNav" data-i18n-attr="aria-label:nav.menu">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2.5 5h11M2.5 11h11"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="container app-hero">
+      <p class="eyebrow" data-i18n="app.eyebrow">Araç 01 · Belge oluşturucu</p>
+      <h1 class="h2" lang="en" data-i18n="app.title">Commercial invoice &amp; packing list</h1>
+      <p class="lead" data-i18n="app.lead">Antetinizi seçin, proformanızı yükleyin, bilgileri kontrol edip belgeleri indirin.</p>
+      <span class="chip chip--ok app-privacy"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.8 13 3.7v4c0 3-2.1 5.3-5 6.5-2.9-1.2-5-3.5-5-6.5v-4L8 1.8Z"/><path d="m5.8 8 1.6 1.6L10.4 6.6" stroke-linecap="round"/></svg><span data-i18n="app.privacy">Dosyalar cihazınızdan çıkmaz</span></span>
+    </section>
+
+    <section class="container setup" aria-label="Kurulum">
+      <!-- 01 Antet -->
+      <article class="panel" id="lhPanel">
+        <header class="panel-head">
+          <span class="step-no">01</span>
+          <div>
+            <h2 data-i18n="lh.title">Antetli kağıt</h2>
+            <p data-i18n="lh.desc">Bir kez yükleyin, bu tarayıcıda saklansın.</p>
+          </div>
+        </header>
+        <div class="lh-grid" id="lhList" role="radiogroup" data-i18n-attr="aria-label:lh.title"></div>
+        <label class="dropzone dropzone--compact" id="lhDrop">
+          <input class="visually-hidden" type="file" id="lhInput" accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg">
+          <span class="dz-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 14v4.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V14"/></svg></span>
+          <span class="dz-text">
+            <strong data-i18n="lh.drop">Yeni antet yükle</strong>
+            <span data-i18n="lh.formats">PDF, Word (.docx), Excel (.xlsx), PNG ya da JPG</span>
+          </span>
+          <span class="dz-busy" aria-hidden="true"><span class="spinner"></span></span>
+        </label>
+        <p class="panel-note"><span data-i18n="lh.tip">En iyi sonuç için PDF önerilir.</span> <span id="lhStorageNote" data-i18n="lh.storageNote">Antetler yalnızca bu tarayıcıda saklanır.</span></p>
+      </article>
+
+      <!-- 02 Proforma -->
+      <article class="panel" id="pfPanel">
+        <header class="panel-head">
+          <span class="step-no">02</span>
+          <div>
+            <h2 data-i18n="pf.title">Proforma fatura</h2>
+            <p data-i18n="pf.desc">Bilgiler okunur ve forma aktarılır.</p>
+          </div>
+        </header>
+        <label class="dropzone" id="pfDrop">
+          <input class="visually-hidden" type="file" id="pfInput" accept=".pdf,.xlsx,.xlsm,.xls,.csv,.ods,.docx,application/pdf">
+          <span class="dz-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5M12 18v-6M9.5 14.5 12 12l2.5 2.5"/></svg></span>
+          <span class="dz-text">
+            <strong data-i18n="pf.drop">Proformayı sürükleyin ya da seçin</strong>
+            <span data-i18n="pf.formats">PDF, Excel (.xlsx, .xls, .csv) ya da Word (.docx)</span>
+          </span>
+          <span class="dz-busy" aria-hidden="true"><span class="spinner"></span></span>
+        </label>
+        <div class="parse-result" id="pfResult" hidden aria-live="polite">
+          <p class="pr-file" id="pfFile"></p>
+          <div class="pr-chips" id="pfChips"></div>
+          <ul class="pr-warnings" id="pfWarnings"></ul>
+        </div>
+        <div class="pf-alt">
+          <span class="muted" data-i18n="pf.or">ya da</span>
+          <button class="btn btn--ghost btn--sm" type="button" id="startBlank" data-i18n="pf.blank">Boş formla başla</button>
+        </div>
+      </article>
+    </section>
+
+    <!-- 03 Kontrol ve indir -->
+    <section class="container workspace" id="workspace" hidden>
+      <header class="ws-head">
+        <span class="step-no">03</span>
+        <div>
+          <h2 class="h3" data-i18n="ws.title">Kontrol et ve indir</h2>
+          <p data-i18n="ws.desc">Proformadan okunan alanlar yeşil kenarlıkla işaretlidir.</p>
+        </div>
+        <button class="btn btn--quiet btn--sm" type="button" id="resetDoc" data-i18n="ws.reset">Yeni belge</button>
+      </header>
+
+      <div class="ws-grid">
+        <form class="ws-form" id="docForm" autocomplete="off" novalidate onsubmit="return false">
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">A</span><span data-i18n="sec.doc">Belge bilgileri</span></summary>
+            <div class="fsec-body fgrid fgrid--3">
+              <div class="field"><label for="f_invoiceNo" data-i18n="f.invoiceNo">Fatura no</label><input class="input" id="f_invoiceNo" data-bind="meta.invoiceNo" data-i18n-attr="placeholder:f.invoiceNoPh"></div>
+              <div class="field"><label for="f_invoiceDate" data-i18n="f.invoiceDate">Fatura tarihi</label><input class="input" type="date" id="f_invoiceDate" data-bind="meta.invoiceDate"></div>
+              <div class="field"><label for="f_currency" data-i18n="f.currency">Para birimi</label><input class="input" id="f_currency" data-bind="meta.currency" list="dl-currency" maxlength="5" autocapitalize="characters"></div>
+              <div class="field"><label for="f_proformaNo" data-i18n="f.proformaNo">Proforma no</label><input class="input" id="f_proformaNo" data-bind="meta.proformaNo"></div>
+              <div class="field"><label for="f_proformaDate" data-i18n="f.proformaDate">Proforma tarihi</label><input class="input" type="date" id="f_proformaDate" data-bind="meta.proformaDate"></div>
+              <div class="field"><label for="f_orderRef" data-i18n="f.orderRef">Sipariş / PO no</label><input class="input" id="f_orderRef" data-bind="meta.orderRef"></div>
+              <div class="field"><label for="f_plNo" data-i18n="f.plNo">Packing list no</label><input class="input" id="f_plNo" data-bind="meta.plNo" data-i18n-attr="placeholder:f.plNoPh"></div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">B</span><span data-i18n="sec.parties">Taraflar</span></summary>
+            <div class="fsec-body">
+              <div class="party-grid">
+                <fieldset class="party">
+                  <legend data-i18n="f.seller">Satıcı / İhracatçı</legend>
+                  <div class="field"><label for="f_sName" data-i18n="f.name">Firma adı</label><input class="input" id="f_sName" data-bind="seller.name"></div>
+                  <div class="field"><label for="f_sAddr" data-i18n="f.address">Adres</label><textarea class="textarea" rows="3" id="f_sAddr" data-bind="seller.address"></textarea></div>
+                  <div class="fgrid fgrid--2">
+                    <div class="field"><label for="f_sTax" data-i18n="f.taxId">Vergi no / VAT</label><input class="input" id="f_sTax" data-bind="seller.taxId"></div>
+                    <div class="field"><label for="f_sCon" data-i18n="f.contact">İletişim</label><input class="input" id="f_sCon" data-bind="seller.contact"></div>
+                  </div>
+                </fieldset>
+                <fieldset class="party">
+                  <legend data-i18n="f.buyer">Alıcı / İthalatçı</legend>
+                  <div class="field"><label for="f_bName" data-i18n="f.name">Firma adı</label><input class="input" id="f_bName" data-bind="buyer.name"></div>
+                  <div class="field"><label for="f_bAddr" data-i18n="f.address">Adres</label><textarea class="textarea" rows="3" id="f_bAddr" data-bind="buyer.address"></textarea></div>
+                  <div class="fgrid fgrid--2">
+                    <div class="field"><label for="f_bTax" data-i18n="f.taxId">Vergi no / VAT</label><input class="input" id="f_bTax" data-bind="buyer.taxId"></div>
+                    <div class="field"><label for="f_bCon" data-i18n="f.contact">İletişim</label><input class="input" id="f_bCon" data-bind="buyer.contact"></div>
+                  </div>
+                </fieldset>
+              </div>
+
+              <div class="party-grid">
+                <fieldset class="party">
+                  <legend data-i18n="f.consignee">Teslim alan (Consignee)</legend>
+                  <label class="check"><input type="checkbox" data-bind="consignee.same"><span data-i18n="f.sameAsBuyer">Alıcı ile aynı</span></label>
+                  <div id="consigneeFields" class="party-fields">
+                    <div class="field"><label for="f_cName" data-i18n="f.name">Firma adı</label><input class="input" id="f_cName" data-bind="consignee.name"></div>
+                    <div class="field"><label for="f_cAddr" data-i18n="f.address">Adres</label><textarea class="textarea" rows="3" id="f_cAddr" data-bind="consignee.address"></textarea></div>
+                    <div class="fgrid fgrid--2">
+                      <div class="field"><label for="f_cTax" data-i18n="f.taxId">Vergi no</label><input class="input" id="f_cTax" data-bind="consignee.taxId"></div>
+                      <div class="field"><label for="f_cCon" data-i18n="f.contact">İletişim</label><input class="input" id="f_cCon" data-bind="consignee.contact"></div>
+                    </div>
+                  </div>
+                </fieldset>
+                <fieldset class="party">
+                  <legend data-i18n="f.notify">Notify party</legend>
+                  <label class="check"><input type="checkbox" data-bind="notify.enabled"><span data-i18n="f.addNotify">Notify party ekle</span></label>
+                  <div id="notifyFields" class="party-fields">
+                    <div class="field"><label for="f_nName" data-i18n="f.name">Firma adı</label><input class="input" id="f_nName" data-bind="notify.name"></div>
+                    <div class="field"><label for="f_nAddr" data-i18n="f.address">Adres</label><textarea class="textarea" rows="3" id="f_nAddr" data-bind="notify.address"></textarea></div>
+                    <div class="field"><label for="f_nCon" data-i18n="f.contact">İletişim</label><input class="input" id="f_nCon" data-bind="notify.contact"></div>
+                  </div>
+                </fieldset>
+              </div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">C</span><span data-i18n="sec.shipment">Sevkiyat</span></summary>
+            <div class="fsec-body fgrid fgrid--3">
+              <div class="field"><label for="f_inco" data-i18n="f.incoterm">Teslim şekli</label><select class="select" id="f_inco" data-bind="shipment.incoterm"></select></div>
+              <div class="field"><label for="f_incoPl" data-i18n="f.incotermPlace">Teslim yeri</label><input class="input" id="f_incoPl" data-bind="shipment.incotermPlace" data-i18n-attr="placeholder:f.incotermPlacePh"></div>
+              <div class="field"><label for="f_tm" data-i18n="f.transportMode">Taşıma şekli</label><select class="select" id="f_tm" data-bind="shipment.transportMode"></select></div>
+              <div class="field span-3"><label for="f_pay" data-i18n="f.paymentTerms">Ödeme şekli</label><input class="input" id="f_pay" data-bind="shipment.paymentTerms" data-i18n-attr="placeholder:f.paymentTermsPh"></div>
+              <div class="field"><label for="f_pol" data-i18n="f.portLoading">Yükleme limanı</label><input class="input" id="f_pol" data-bind="shipment.portLoading"></div>
+              <div class="field"><label for="f_pod" data-i18n="f.portDischarge">Varış limanı</label><input class="input" id="f_pod" data-bind="shipment.portDischarge"></div>
+              <div class="field"><label for="f_fd" data-i18n="f.finalDestination">Nihai varış yeri</label><input class="input" id="f_fd" data-bind="shipment.finalDestination"></div>
+              <div class="field"><label for="f_coo" data-i18n="f.countryOrigin">Menşe ülkesi</label><input class="input" id="f_coo" data-bind="shipment.countryOrigin" data-i18n-attr="placeholder:f.countryOriginPh"></div>
+              <div class="field"><label for="f_cod" data-i18n="f.countryDestination">Varış ülkesi</label><input class="input" id="f_cod" data-bind="shipment.countryDestination"></div>
+              <div class="field"><label for="f_sd" data-i18n="f.shipmentDate">Sevk tarihi</label><input class="input" type="date" id="f_sd" data-bind="shipment.shipmentDate"></div>
+              <div class="field"><label for="f_ves" data-i18n="f.vessel">Gemi / uçuş / araç</label><input class="input" id="f_ves" data-bind="shipment.vessel"></div>
+              <div class="field"><label for="f_cnt" data-i18n="f.containerNo">Konteyner / mühür no</label><input class="input" id="f_cnt" data-bind="shipment.containerNo"></div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">D</span><span data-i18n="sec.items">Kalemler</span><span class="fsec-count" id="itemCount"></span></summary>
+            <div class="fsec-body">
+              <div class="items-bar">
+                <div class="segmented" role="group" id="itemView">
+                  <button type="button" data-view="invoice" aria-pressed="true" data-i18n="it.viewInvoice">Fatura sütunları</button>
+                  <button type="button" data-view="packing" aria-pressed="false" data-i18n="it.viewPacking">Paketleme sütunları</button>
+                </div>
+                <button class="btn btn--ghost btn--sm" type="button" id="addItem"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg><span data-i18n="it.add">Satır ekle</span></button>
+              </div>
+              <div class="items-wrap">
+                <table class="items" id="itemsTable">
+                  <thead></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              <div class="items-foot">
+                <p class="muted items-hint" data-i18n="it.pasteHint">İpucu: Excel'den birden çok satırı kopyalayıp açıklama hücresine yapıştırabilirsiniz.</p>
+                <p class="muted items-hint is-warn" id="curWarn" data-i18n="it.mixedCur" hidden>Kalemlerde farklı para birimleri var; toplamlar birimlere bakmadan toplanır.</p>
+                <dl class="totals-strip" id="itemTotals"></dl>
+              </div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">E</span><span data-i18n="sec.charges">Ek tutarlar ve toplam</span></summary>
+            <div class="fsec-body">
+              <div class="fgrid fgrid--3">
+                <div class="field"><label for="f_fr" data-i18n="f.freight">Navlun</label><input class="input" id="f_fr" inputmode="decimal" data-bind="charges.freight"></div>
+                <div class="field"><label for="f_ins" data-i18n="f.insurance">Sigorta</label><input class="input" id="f_ins" inputmode="decimal" data-bind="charges.insurance"></div>
+                <div class="field"><label for="f_disc" data-i18n="f.discount">İndirim</label><input class="input" id="f_disc" inputmode="decimal" data-bind="charges.discount"></div>
+                <div class="field span-2"><label for="f_othL" data-i18n="f.otherLabel">Diğer masraf adı</label><input class="input" id="f_othL" data-bind="charges.otherLabel" data-i18n-attr="placeholder:f.otherLabelPh"></div>
+                <div class="field"><label for="f_oth" data-i18n="f.other">Diğer masraf tutarı</label><input class="input" id="f_oth" inputmode="decimal" data-bind="charges.other"></div>
+                <div class="field"><label for="f_vatr" data-i18n="f.vatRate">KDV oranı (%)</label><input class="input" id="f_vatr" inputmode="decimal" data-bind="charges.vatRate"></div>
+                <div class="field"><label for="f_vat" data-i18n="f.vat">KDV tutarı</label><input class="input" id="f_vat" inputmode="decimal" data-bind="charges.vat"></div>
+              </div>
+              <div class="sum-box" id="chargeTotals"></div>
+              <label class="check"><input type="checkbox" data-bind="options.amountInWords"><span data-i18n="f.amountInWords">Toplam tutarı yazıyla göster</span></label>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">F</span><span data-i18n="sec.packing">Paketleme</span></summary>
+            <div class="fsec-body">
+              <div class="fgrid fgrid--2">
+                <div class="field"><label for="f_pt" data-i18n="f.packageType">Varsayılan kap cinsi</label><input class="input" id="f_pt" data-bind="packing.packageType" list="dl-pkg" autocapitalize="characters"></div>
+                <div class="field"><label for="f_marks" data-i18n="f.marks">Marka ve numaralar</label><textarea class="textarea" rows="2" id="f_marks" data-bind="packing.marks" data-i18n-attr="placeholder:f.marksPh"></textarea></div>
+              </div>
+              <div class="sub-head">
+                <span class="field-label" data-i18n="f.totalsTitle">Toplamlar</span>
+                <span class="muted" data-i18n="f.totalsHint">Boş bırakılırsa kalemlerden hesaplanır.</span>
+              </div>
+              <div class="fgrid fgrid--4">
+                <div class="field"><label for="f_tp" data-i18n="f.totalPackages">Toplam kap</label><input class="input" id="f_tp" inputmode="decimal" data-bind="packing.totalPackages"></div>
+                <div class="field"><label for="f_tn" data-i18n="f.totalNet">Toplam net (kg)</label><input class="input" id="f_tn" inputmode="decimal" data-bind="packing.totalNet"></div>
+                <div class="field"><label for="f_tg" data-i18n="f.totalGross">Toplam brüt (kg)</label><input class="input" id="f_tg" inputmode="decimal" data-bind="packing.totalGross"></div>
+                <div class="field"><label for="f_tv" data-i18n="f.totalVolume">Toplam hacim (m³)</label><input class="input" id="f_tv" inputmode="decimal" data-bind="packing.totalVolume"></div>
+              </div>
+              <div class="dist">
+                <div>
+                  <strong data-i18n="dist.title">Toplamları kalemlere dağıt</strong>
+                  <p class="muted" data-i18n="dist.desc"></p>
+                </div>
+                <div class="dist-actions">
+                  <select class="select" id="distBasis" aria-label="basis">
+                    <option value="qty" data-i18n="dist.byQty">Miktara göre</option>
+                    <option value="amount" data-i18n="dist.byAmount">Tutara göre</option>
+                  </select>
+                  <button class="btn btn--ghost btn--sm" type="button" id="distApply" data-i18n="dist.apply">Dağıt</button>
+                </div>
+              </div>
+              <div class="checks">
+                <label class="check"><input type="checkbox" data-bind="options.showWeightsOnInvoice"><span data-i18n="f.showWeightsOnInvoice">Ağırlık özetini faturada göster</span></label>
+                <label class="check"><input type="checkbox" data-bind="options.showHsOnPl"><span data-i18n="f.showHsOnPl">Packing list'te HS kodunu göster</span></label>
+              </div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">G</span><span data-i18n="sec.bank">Banka bilgileri</span></summary>
+            <div class="fsec-body">
+              <label class="check"><input type="checkbox" data-bind="bank.show"><span data-i18n="f.bankShow">Banka bilgilerini faturada göster</span></label>
+              <div class="fgrid fgrid--3" id="bankFields">
+                <div class="field"><label for="f_bk" data-i18n="f.bankName">Banka</label><input class="input" id="f_bk" data-bind="bank.bankName"></div>
+                <div class="field"><label for="f_br" data-i18n="f.branch">Şube</label><input class="input" id="f_br" data-bind="bank.branch"></div>
+                <div class="field"><label for="f_an" data-i18n="f.accountName">Hesap sahibi</label><input class="input" id="f_an" data-bind="bank.accountName"></div>
+                <div class="field span-2"><label for="f_iban" data-i18n="f.iban">IBAN</label><input class="input mono-num" id="f_iban" data-bind="bank.iban" autocapitalize="characters" spellcheck="false"></div>
+                <div class="field"><label for="f_sw" data-i18n="f.swift">SWIFT / BIC</label><input class="input" id="f_sw" data-bind="bank.swift" autocapitalize="characters" spellcheck="false"></div>
+                <div class="field"><label for="f_acn" data-i18n="f.accountNo">Hesap no</label><input class="input" id="f_acn" data-bind="bank.accountNo"></div>
+              </div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">H</span><span data-i18n="sec.sign">Beyan ve imza</span></summary>
+            <div class="fsec-body">
+              <label class="check"><input type="checkbox" data-bind="sign.showDeclaration"><span data-i18n="f.showDeclaration">Beyan metnini göster</span></label>
+              <div class="field" id="declField"><label for="f_decl" data-i18n="f.declaration">Beyan metni</label><textarea class="textarea" rows="3" id="f_decl" data-bind="sign.declaration"></textarea></div>
+              <div class="fgrid fgrid--3">
+                <div class="field"><label for="f_sn" data-i18n="f.signName">Yetkili adı</label><input class="input" id="f_sn" data-bind="sign.name"></div>
+                <div class="field"><label for="f_st" data-i18n="f.signTitle">Unvanı</label><input class="input" id="f_st" data-bind="sign.title"></div>
+                <div class="field"><label for="f_sp" data-i18n="f.signPlace">Düzenlenme yeri</label><input class="input" id="f_sp" data-bind="sign.place"></div>
+                <div class="field" id="paperField"><label for="f_paper" data-i18n="f.paper">Kağıt boyutu</label>
+                  <select class="select" id="f_paper" data-bind="options.paper"><option value="A4">A4</option><option value="LETTER">Letter</option></select>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">I</span><span data-i18n="sec.ship">Sevkiyat talimatı ve B/L</span></summary>
+            <div class="fsec-body">
+              <div class="fgrid fgrid--3">
+                <div class="field"><label for="f_siNo" data-i18n="f.siNo">S.I. no</label><input class="input" id="f_siNo" data-bind="ship.siNo"></div>
+                <div class="field"><label for="f_blNo" data-i18n="f.blNo">B/L no</label><input class="input" id="f_blNo" data-bind="ship.blNo"></div>
+                <div class="field"><label for="f_bkNo" data-i18n="f.bookingNo">Booking no</label><input class="input" id="f_bkNo" data-bind="ship.bookingNo"></div>
+                <div class="field span-2"><label for="f_carrier" data-i18n="f.carrier">Taşıyıcı / hat</label><input class="input" id="f_carrier" data-bind="ship.carrier"></div>
+                <div class="field"><label for="f_orig" data-i18n="f.originals">Orijinal B/L sayısı</label><input class="input" id="f_orig" inputmode="numeric" data-bind="ship.originals"></div>
+                <div class="field"><label for="f_prec" data-i18n="f.placeReceipt">Teslim alma yeri</label><input class="input" id="f_prec" data-bind="ship.placeReceipt"></div>
+                <div class="field"><label for="f_pdel" data-i18n="f.placeDelivery">Teslim yeri</label><input class="input" id="f_pdel" data-bind="ship.placeDelivery"></div>
+                <div class="field"><label for="f_ft" data-i18n="f.freightTerms">Navlun ödemesi</label>
+                  <select class="select" id="f_ft" data-bind="ship.freightTerms"><option value="" data-i18n="opt.none">—</option><option value="prepaid" lang="en">Freight prepaid</option><option value="collect" lang="en">Freight collect</option></select>
+                </div>
+                <div class="field"><label for="f_blt" data-i18n="f.blType">B/L türü</label>
+                  <select class="select" id="f_blt" data-bind="ship.blType"><option value="" data-i18n="opt.none">—</option><option value="original" lang="en">Original B/L</option><option value="surrender" lang="en">Telex release / surrendered</option><option value="seaway" lang="en">Sea waybill</option></select>
+                </div>
+                <div class="field span-3"><label for="f_fwd" data-i18n="f.forwarder">Forwarder / acente (yalnızca talimatta)</label><textarea class="textarea" rows="2" id="f_fwd" data-bind="ship.forwarder"></textarea></div>
+                <div class="field span-3"><label for="f_gd" data-i18n="f.goodsDesc">Mal tanımı (boşsa kalemlerden)</label><textarea class="textarea" rows="3" id="f_gd" data-bind="ship.goodsDescription"></textarea></div>
+                <div class="field span-3"><label for="f_ins2" data-i18n="f.instructions">Özel talimatlar</label><textarea class="textarea" rows="2" id="f_ins2" data-bind="ship.instructions"></textarea></div>
+              </div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">J</span><span data-i18n="sec.origin">Menşe beyanı</span></summary>
+            <div class="fsec-body">
+              <div class="fgrid fgrid--3">
+                <div class="field"><label for="f_ocn" data-i18n="f.originNo">Beyan no</label><input class="input" id="f_ocn" data-bind="origin.certNo"></div>
+              </div>
+              <div class="field"><label for="f_ost" data-i18n="f.originStmt">Beyan metni</label><textarea class="textarea" rows="4" id="f_ost" data-bind="origin.statement"></textarea>
+                <p class="muted" data-i18n="f.originHint">{origin} menşe ülkesi, {seller} satıcı adıyla değiştirilir.</p></div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">K</span><span data-i18n="sec.instr">Talimat mektupları</span></summary>
+            <div class="fsec-body">
+              <div class="fgrid fgrid--3">
+                <div class="field span-3"><label for="f_ito" data-i18n="f.toLoading">Yükleme talimatı muhatabı (depo / yükleme yeri)</label><textarea class="textarea" rows="2" id="f_ito" data-bind="instr.toLoading"></textarea></div>
+                <div class="field"><label for="f_lpl" data-i18n="f.loadPlace">Yükleme yeri</label><input class="input" id="f_lpl" data-bind="instr.loadingPlace"></div>
+                <div class="field"><label for="f_ldt" data-i18n="f.loadDate">Yükleme tarihi</label><input class="input" type="date" id="f_ldt" data-bind="instr.loadingDate"></div>
+                <div class="field"><label for="f_lct" data-i18n="f.loadContact">Yükleme yeri irtibat</label><input class="input" id="f_lct" data-bind="instr.loadContact"></div>
+                <div class="field"><label for="f_veh" data-i18n="f.vehicle">Araç plakası</label><input class="input" id="f_veh" data-bind="instr.vehicle"></div>
+                <div class="field"><label for="f_drv" data-i18n="f.driver">Sürücü</label><input class="input" id="f_drv" data-bind="instr.driver"></div>
+                <div class="field span-3"><label for="f_lnt" data-i18n="f.loadNotes">Yükleme notları</label><textarea class="textarea" rows="2" id="f_lnt" data-bind="instr.loadNotes"></textarea></div>
+                <div class="field span-3"><label for="f_itc" data-i18n="f.toCoo">Menşe şahadetnamesi talimatı muhatabı (oda / müşavir)</label><textarea class="textarea" rows="2" id="f_itc" data-bind="instr.toCoo"></textarea></div>
+                <div class="field span-3"><label for="f_ite" data-i18n="f.toEur1">EUR.1 talimatı muhatabı (gümrük müşaviri)</label><textarea class="textarea" rows="2" id="f_ite" data-bind="instr.toEur1"></textarea></div>
+                <div class="field"><label for="f_cop" data-i18n="f.copies">İstenen nüsha sayısı</label><input class="input" id="f_cop" inputmode="numeric" data-bind="instr.copies"></div>
+                <div class="field"><label for="f_ecr" data-i18n="f.eur1Criterion">Menşe kriteri (EUR.1)</label><input class="input" id="f_ecr" data-bind="instr.eur1Criterion" placeholder="e.g. sufficiently processed"></div>
+                <div class="field"><label for="f_eag" data-i18n="f.eur1Agreement">Anlaşma / tercih (EUR.1)</label><input class="input" id="f_eag" data-bind="instr.eur1Agreement" placeholder="e.g. EU-Türkiye Customs Union"></div>
+                <div class="field span-3"><label for="f_cnt" data-i18n="f.certNotes">Şahadetname / EUR.1 notları</label><textarea class="textarea" rows="2" id="f_cnt" data-bind="instr.certNotes"></textarea></div>
+              </div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">L</span><span data-i18n="sec.ins">Sigorta talimatı</span></summary>
+            <div class="fsec-body">
+              <div class="fgrid fgrid--3">
+                <div class="field span-3"><label for="f_insTo" data-i18n="f.insTo">Muhatap (sigortacı / acente)</label><textarea class="textarea" rows="2" id="f_insTo" data-bind="ins.to"></textarea></div>
+                <div class="field span-2"><label for="f_insCov" data-i18n="f.insCoverage">Teminat</label><input class="input" id="f_insCov" data-bind="ins.coverage" list="dl-cov"></div>
+                <div class="field"><label for="f_insPct" data-i18n="f.insPct">Fatura değerine ek (%)</label><input class="input" id="f_insPct" inputmode="decimal" data-bind="ins.extraPct"></div>
+                <div class="field"><label for="f_insWho" data-i18n="f.insWho">Sigortalı</label>
+                  <select class="select" id="f_insWho" data-bind="ins.insuredParty"><option value="seller" data-i18n="f.insSeller">Satıcı</option><option value="buyer" data-i18n="f.insBuyer">Alıcı</option></select>
+                </div>
+                <div class="field span-2"><label for="f_insClaim" data-i18n="f.insClaims">Hasar ödeme yeri</label><input class="input" id="f_insClaim" data-bind="ins.claimsPayableAt"></div>
+                <div class="field span-3"><label for="f_insNotes" data-i18n="f.insNotes">Özel şartlar</label><textarea class="textarea" rows="2" id="f_insNotes" data-bind="ins.notes"></textarea></div>
+              </div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">M</span><span data-i18n="sec.trans">Nakliye talimatı (karayolu)</span></summary>
+            <div class="fsec-body">
+              <div class="fgrid fgrid--3">
+                <div class="field span-3"><label for="f_trTo" data-i18n="f.trTo">Muhatap (nakliyeci)</label><textarea class="textarea" rows="2" id="f_trTo" data-bind="trans.to"></textarea></div>
+                <div class="field span-2"><label for="f_trLa" data-i18n="f.trLoadAddr">Yükleme adresi</label><input class="input" id="f_trLa" data-bind="trans.loadAddress"></div>
+                <div class="field"><label for="f_trLd" data-i18n="f.trLoadDate">Yükleme tarihi</label><input class="input" type="date" id="f_trLd" data-bind="trans.loadDate"></div>
+                <div class="field span-2"><label for="f_trUa" data-i18n="f.trUnloadAddr">Boşaltma adresi</label><input class="input" id="f_trUa" data-bind="trans.unloadAddress"></div>
+                <div class="field"><label for="f_trDd" data-i18n="f.trDelDate">Teslim tarihi</label><input class="input" type="date" id="f_trDd" data-bind="trans.deliveryDate"></div>
+                <div class="field"><label for="f_trVt" data-i18n="f.trVehicle">Araç tipi</label><input class="input" id="f_trVt" data-bind="trans.vehicleType" placeholder="e.g. 13.6 m tautliner"></div>
+                <div class="field"><label for="f_trFr" data-i18n="f.trFreight">Anlaşılan navlun</label><input class="input" id="f_trFr" inputmode="decimal" data-bind="trans.freight"></div>
+                <div class="field"><label for="f_trPt" data-i18n="f.trPayment">Ödeme şartı</label><input class="input" id="f_trPt" data-bind="trans.paymentTerms" placeholder="e.g. 30 days after delivery"></div>
+                <div class="field span-3"><label for="f_trNotes" data-i18n="f.trNotes">Ek şartlar</label><textarea class="textarea" rows="2" id="f_trNotes" data-bind="trans.notes"></textarea></div>
+              </div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">N</span><span data-i18n="sec.prealert">Pre-alert (sevkiyat bildirimi)</span></summary>
+            <div class="fsec-body">
+              <div class="fgrid fgrid--3">
+                <div class="field span-2"><label for="f_paTo" data-i18n="f.paTo">Muhatap (boşsa alıcı)</label><input class="input" id="f_paTo" data-bind="preAlert.to"></div>
+                <div class="field"><label for="f_paEta" data-i18n="f.paEta">Tahmini varış (ETA)</label><input class="input" type="date" id="f_paEta" data-bind="preAlert.eta"></div>
+                <div class="field span-3"><label for="f_paDocs" data-i18n="f.paDocs">Ek eklenen belgeler (satır satır)</label><textarea class="textarea" rows="2" id="f_paDocs" data-bind="preAlert.docsExtra"></textarea></div>
+                <div class="field span-3"><label for="f_paNotes" data-i18n="f.paNotes">Notlar</label><textarea class="textarea" rows="2" id="f_paNotes" data-bind="preAlert.notes"></textarea></div>
+              </div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">O</span><span data-i18n="sec.pallets">Palet listesi</span></summary>
+            <div class="fsec-body">
+              <p class="muted" data-i18n="pal.hint"></p>
+              <div class="items-bar">
+                <span class="muted" id="palCount"></span>
+                <div class="dist-actions">
+                  <button class="btn btn--ghost btn--sm" type="button" id="palFill" data-i18n="pal.fill">Kalemlerden oluştur</button>
+                  <button class="btn btn--ghost btn--sm" type="button" id="palAdd"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg><span data-i18n="pal.add">Palet ekle</span></button>
+                </div>
+              </div>
+              <div class="items-wrap">
+                <table class="items" id="palletTable">
+                  <thead></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">P</span><span data-i18n="sec.cmr">CMR (karayolu taşıma senedi)</span></summary>
+            <div class="fsec-body">
+              <div class="fgrid fgrid--3">
+                <div class="field span-3"><label for="f_cmrCar" data-i18n="f.cmrCarrier"></label><textarea class="textarea" rows="2" id="f_cmrCar" data-bind="cmr.carrier"></textarea></div>
+                <div class="field span-2"><label for="f_cmrPl" data-i18n="f.cmrPlate"></label><input class="input" id="f_cmrPl" data-bind="cmr.plate" ></div>
+                <div class="field "><label for="f_cmrPackM" data-i18n="f.cmrPacking"></label><input class="input" id="f_cmrPackM" data-bind="cmr.packing" ></div>
+                <div class="field span-2"><label for="f_cmrTkP" data-i18n="f.cmrTakingPlace"></label><input class="input" id="f_cmrTkP" data-bind="cmr.takingPlace" ></div>
+                <div class="field "><label for="f_cmrTkD" data-i18n="f.cmrTakingDate"></label><input class="input" id="f_cmrTkD" data-bind="cmr.takingDate" type="date"></div>
+                <div class="field span-3"><label for="f_cmrDel" data-i18n="f.cmrDelivery"></label><input class="input" id="f_cmrDel" data-bind="cmr.deliveryPlace" ></div>
+                <div class="field span-3"><label for="f_cmrDocs" data-i18n="f.cmrDocs"></label><input class="input" id="f_cmrDocs" data-bind="cmr.docs" ></div>
+                <div class="field"><label for="f_cmrPay" data-i18n="f.cmrPayment">Navlun ödemesi</label>
+                  <select class="select" id="f_cmrPay" data-bind="cmr.payment"><option value="paid" lang="en">Carriage paid (sender)</option><option value="forward" lang="en">Carriage forward (consignee)</option></select>
+                </div>
+                <div class="field span-2"><label for="f_cmrCod" data-i18n="f.cmrCod"></label><input class="input" id="f_cmrCod" data-bind="cmr.cod" inputmode="decimal"></div>
+                <div class="field span-3"><label for="f_cmrIns" data-i18n="f.cmrInstr"></label><textarea class="textarea" rows="2" id="f_cmrIns" data-bind="cmr.instructions"></textarea></div>
+                <div class="field span-3"><label for="f_cmrRes" data-i18n="f.cmrReservations"></label><textarea class="textarea" rows="2" id="f_cmrRes" data-bind="cmr.reservations"></textarea></div>
+                <div class="field span-3"><label for="f_cmrSp" data-i18n="f.cmrSpecial"></label><textarea class="textarea" rows="2" id="f_cmrSp" data-bind="cmr.special"></textarea></div>
+              </div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">Q</span><span data-i18n="sec.poa">Gümrük vekaletnamesi</span></summary>
+            <div class="fsec-body">
+              <div class="fgrid fgrid--3">
+                <div class="field span-3"><label for="f_poaAt" data-i18n="f.poaAttorney"></label><textarea class="textarea" rows="2" id="f_poaAt" data-bind="poa.attorney"></textarea></div>
+                <div class="field"><label for="f_poaGr" data-i18n="f.poaGrantor">Vekalet veren</label>
+                  <select class="select" id="f_poaGr" data-bind="poa.grantor"><option value="seller" data-i18n="f.insSeller">Satıcı</option><option value="buyer" data-i18n="f.insBuyer">Alıcı</option></select>
+                </div>
+                <div class="field span-2"><label for="f_poaCo" data-i18n="f.poaCountry"></label><input class="input" id="f_poaCo" data-bind="poa.country" ></div>
+                <div class="field "><label for="f_poaFrom" data-i18n="f.poaFrom"></label><input class="input" id="f_poaFrom" data-bind="poa.validFrom" type="date"></div>
+                <div class="field "><label for="f_poaUntil" data-i18n="f.poaUntil"></label><input class="input" id="f_poaUntil" data-bind="poa.validUntil" type="date"></div>
+                <div class="field span-3"><label for="f_poaScope" data-i18n="f.poaScope"></label><textarea class="textarea" rows="6" id="f_poaScope" data-bind="poa.scope"></textarea></div>
+                <div class="field span-3"><label for="f_poaNotes" data-i18n="f.poaNotes"></label><textarea class="textarea" rows="2" id="f_poaNotes" data-bind="poa.notes"></textarea></div>
+              </div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">R</span><span data-i18n="sec.contract">Satış sözleşmesi</span></summary>
+            <div class="fsec-body">
+              <div class="fgrid fgrid--3">
+                <div class="field "><label for="f_scNo" data-i18n="f.scNo"></label><input class="input" id="f_scNo" data-bind="contract.no" ></div>
+                <div class="field span-2"><label for="f_scPl" data-i18n="f.scPlace"></label><input class="input" id="f_scPl" data-bind="contract.place" ></div>
+                <div class="field span-3"><label for="f_scDel" data-i18n="f.scDelivery"></label><textarea class="textarea" rows="2" id="f_scDel" data-bind="contract.delivery"></textarea></div>
+                <div class="field span-3"><label for="f_scLate" data-i18n="f.scLate"></label><input class="input" id="f_scLate" data-bind="contract.lateInterest" ></div>
+                <div class="field span-3"><label for="f_scWar" data-i18n="f.scWarranty"></label><textarea class="textarea" rows="2" id="f_scWar" data-bind="contract.warranty"></textarea></div>
+                <div class="field span-3"><label for="f_scCl" data-i18n="f.scClaims"></label><textarea class="textarea" rows="3" id="f_scCl" data-bind="contract.claims"></textarea></div>
+                <div class="field span-3"><label for="f_scDocs" data-i18n="f.scDocs"></label><input class="input" id="f_scDocs" data-bind="contract.documents" ></div>
+                <div class="field span-3"><label for="f_scLaw" data-i18n="f.scLaw"></label><textarea class="textarea" rows="2" id="f_scLaw" data-bind="contract.law"></textarea></div>
+                <div class="field span-3"><label for="f_scDis" data-i18n="f.scDisputes"></label><textarea class="textarea" rows="2" id="f_scDis" data-bind="contract.disputes"></textarea></div>
+                <label class="check span-3"><input type="checkbox" data-bind="contract.forceMajeure"><span data-i18n="f.scFm"></span></label><div class="field span-3"><label for="f_scEx" data-i18n="f.scExtra"></label><textarea class="textarea" rows="2" id="f_scEx" data-bind="contract.extra"></textarea></div>
+              </div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">S</span><span data-i18n="sec.bill">Kambiyo senedi (poliçe / bono)</span></summary>
+            <div class="fsec-body">
+              <div class="fgrid fgrid--3">
+                <div class="field "><label for="f_bKind" data-i18n="f.bKind"></label><select class="select" id="f_bKind" data-bind="bill.kind"><option value="draft" lang="en">Bill of exchange (draft)</option><option value="note" lang="en">Promissory note</option></select></div>
+                <div class="field "><label for="f_bSet" data-i18n="f.bSet"></label><select class="select" id="f_bSet" data-bind="bill.set"><option value="first" lang="en">First of exchange</option><option value="second" lang="en">Second of exchange</option></select></div>
+                <div class="field "><label for="f_bNo" data-i18n="f.bNo"></label><input class="input" id="f_bNo" data-bind="bill.no" ></div>
+                <div class="field "><label for="f_bTen" data-i18n="f.bTenor"></label><select class="select" id="f_bTen" data-bind="bill.tenor"><option value="sight" lang="en">At sight</option><option value="afterSight" lang="en">Days after sight</option><option value="afterBL" lang="en">Days after B/L date</option><option value="afterInvoice" lang="en">Days after invoice date</option><option value="fixed" lang="en">Fixed due date</option></select></div>
+                <div class="field "><label for="f_bDays" data-i18n="f.bDays"></label><input class="input" id="f_bDays" data-bind="bill.days" inputmode="decimal"></div>
+                <div class="field "><label for="f_bDue" data-i18n="f.bDue"></label><input class="input" id="f_bDue" data-bind="bill.dueDate" type="date"></div>
+                <div class="field "><label for="f_bAmt" data-i18n="f.bAmount"></label><input class="input" id="f_bAmt" data-bind="bill.amount" inputmode="decimal"></div>
+                <div class="field span-2"><label for="f_bPl" data-i18n="f.bPlace"></label><input class="input" id="f_bPl" data-bind="bill.place" ></div>
+                <div class="field span-3"><label for="f_bPay" data-i18n="f.bPayTo"></label><input class="input" id="f_bPay" data-bind="bill.payTo" ></div>
+                <div class="field span-3"><label for="f_bUnder" data-i18n="f.bUnder"></label><input class="input" id="f_bUnder" data-bind="bill.drawnUnder" ></div><div class="field span-3"><label for="f_bAval" data-i18n="f.bAval"></label><textarea class="textarea" rows="2" id="f_bAval" data-bind="bill.aval"></textarea></div>
+              </div>
+            </div>
+          </details>
+
+          <details class="fsec" open>
+            <summary><span class="fsec-no">T</span><span data-i18n="sec.labels">Etiketler</span></summary>
+            <div class="fsec-body">
+              <div class="fgrid fgrid--3">
+                <div class="field "><label for="f_lbFmt" data-i18n="f.lbFormat"></label><select class="select" id="f_lbFmt" data-bind="labels.format"><option value="a6x4" lang="en">A6, 4 per A4 sheet</option><option value="a5x2" lang="en">A5, 2 per A4 sheet</option><option value="thermal" lang="en">100 x 150 mm thermal printer</option></select></div>
+                <div class="field "><label for="f_lbSrc" data-i18n="f.lbSource"></label><select class="select" id="f_lbSrc" data-bind="labels.source"><option value="packages" lang="en">One per package (X / N)</option><option value="pallets" lang="en">One per pallet row (from pallet list)</option></select></div>
+                <div class="field "><label for="f_lbCnt" data-i18n="f.lbCount"></label><input class="input" id="f_lbCnt" data-bind="labels.count" inputmode="decimal"></div>
+                <div class="field span-2"><label for="f_lbBan" data-i18n="f.lbBanner"></label><input class="input" id="f_lbBan" data-bind="labels.banner" maxlength="36" placeholder="e.g. FRAGILE - KEEP DRY"></div>
+                <label class="check span-3"><input type="checkbox" data-bind="labels.showSeller"><span data-i18n="f.lbSeller"></span></label>
+              </div>
+            </div>
+          </details>
+        </form>
+
+        <aside class="ws-preview" id="previewPanel" aria-label="Önizleme">
+          <div class="pv-card">
+            <div class="pv-head">
+              <label class="pv-select"><span class="visually-hidden" data-i18n="pv.docLabel">Belge</span>
+                <select class="select" id="pvDoc" lang="en">
+                  <optgroup label="Commercial">
+                    <option value="ci" selected data-i18n="pv.ci">Commercial invoice</option>
+                    <option value="pl" data-i18n="pv.pl">Packing list</option>
+                    <option value="pallet" data-i18n="pv.pallet">Packing list by pallet</option>
+                    <option value="contract" data-i18n="pv.contract">Sales contract</option>
+                    <option value="bill" data-i18n="pv.bill">Bill of exchange / note</option>
+                  </optgroup>
+                  <optgroup label="Shipment">
+                    <option value="si" data-i18n="pv.si">Shipping instruction</option>
+                    <option value="bl" data-i18n="pv.bl">B/L draft</option>
+                    <option value="prealert" data-i18n="pv.prealert">Pre-alert</option>
+                    <option value="cmr" data-i18n="pv.cmr">CMR consignment note</option>
+                    <option value="labels" data-i18n="pv.labels">Package labels</option>
+                  </optgroup>
+                  <optgroup label="Instructions">
+                    <option value="loading" data-i18n="pv.loading">Loading instruction</option>
+                    <option value="trans" data-i18n="pv.trans">Transport order</option>
+                    <option value="ins" data-i18n="pv.ins">Insurance request</option>
+                  </optgroup>
+                  <optgroup label="Origin and customs">
+                    <option value="origin" data-i18n="pv.origin">Declaration of origin</option>
+                    <option value="coo" data-i18n="pv.coo">Certificate of origin request</option>
+                    <option value="eur1" data-i18n="pv.eur1">EUR.1 request</option>
+                    <option value="poa" data-i18n="pv.poa">Customs power of attorney</option>
+                  </optgroup>
+                </select>
+              </label>
+            </div>
+            <div class="pv-bar">
+              <div class="pv-bar-info"><strong class="pv-title" id="pvTitle" lang="en"></strong><span class="pv-meta" id="pvMeta"></span></div>
+              <div class="pv-bar-actions">
+                <button class="btn btn--ghost btn--sm pv-open" type="button" id="pvOpen"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/></svg><span data-i18n="pv.open">Önizleme</span></button>
+                <button class="icon-btn" type="button" id="dlCurrent" data-i18n-attr="aria-label:pv.dlThis;title:pv.dlThis"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10"/></svg></button>
+                <div class="pv-more">
+                  <button class="icon-btn icon-btn--plain" type="button" id="dlMore" aria-haspopup="menu" aria-expanded="false" data-i18n-attr="aria-label:pv.dlMore;title:pv.dlMore"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.5" cy="8" r="1.3"/></svg></button>
+                  <div class="pv-menu" id="dlMenu" role="menu" hidden>
+                    <button type="button" role="menuitem" data-dl="all" data-i18n="pv.dlAll">Tüm belgeler tek PDF</button>
+                    <button type="button" role="menuitem" data-dl="xlsx" data-i18n="pv.dlXlsx">Excel (iki sayfa)</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="pv-issues" id="pvIssues" hidden></div>
+            <div class="pv-stage" id="pvStage">
+              <div class="pv-pages" id="pvPages"></div>
+              <div class="pv-loading" id="pvLoading" hidden><span class="spinner"></span><span data-i18n="pv.rendering">Önizleme hazırlanıyor…</span></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <a class="pv-fab btn btn--solid btn--sm" href="#previewPanel" id="pvFab"><span data-i18n="ws.toPreview">Önizleme</span></a>
+    </section>
+  </main>
+
+  <footer class="site-footer site-footer--compact">
+    <div class="container">
+      <div class="footer-bottom">
+        <span>© <span data-year>2026</span> logisticedo.com</span>
+        <span data-i18n="footer.disclaimer">Oluşturulan belgeleri kullanmadan önce kontrol etmek kullanıcının sorumluluğundadır.</span>
+      </div>
+    </div>
+  </footer>
+
+  <datalist id="dl-currency"></datalist>
+  <datalist id="dl-cov"><option value="ICC (A) - ALL RISKS"><option value="ICC (B)"><option value="ICC (C)"><option value="OPEN COVER / ANNUAL POLICY"></datalist>
+  <datalist id="dl-unit"></datalist>
+  <datalist id="dl-pkg"></datalist>
+
+  <!-- Antet ayar penceresi -->
+  <dialog class="dialog dialog--pv" id="pvDialog" aria-labelledby="pvdTitle">
+    <div class="dialog-inner">
+      <header class="dialog-head">
+        <h2 id="pvdTitle" lang="en"></h2>
+        <div class="pvd-actions">
+          <button class="icon-btn" type="button" id="pvdDownload" data-i18n-attr="aria-label:pv.dlThis;title:pv.dlThis"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10"/></svg></button>
+          <button class="icon-btn icon-btn--plain" type="button" id="pvdClose" data-i18n-attr="aria-label:common.close;title:common.close"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8"/></svg></button>
+        </div>
+      </header>
+      <div class="pvd-body" id="pvdBody">
+        <div class="pv-pages" id="pvdPages"></div>
+        <div class="pv-loading" id="pvdLoading" hidden><span class="spinner"></span><span data-i18n="pv.rendering">Önizleme hazırlanıyor…</span></div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="dialog" id="lhDialog" aria-labelledby="lhdTitle">
+    <form method="dialog" class="dialog-inner" id="lhdForm">
+      <header class="dialog-head">
+        <h2 id="lhdTitle" data-i18n="lhd.title">Anteti ayarla</h2>
+        <button class="icon-btn icon-btn--plain" value="cancel" type="submit" data-i18n-attr="aria-label:common.close">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8"/></svg>
+        </button>
+      </header>
+      <div class="dialog-body">
+        <div class="lhd-stage">
+          <div class="lhd-page" id="lhdPage">
+            <img id="lhdImg" alt="">
+            <div class="lhd-area" id="lhdArea">
+              <span class="lhd-area-label" data-i18n="lhd.content">İçerik alanı</span>
+              <span class="lhd-ghost" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+              <span class="lhd-handle" data-edge="top" aria-hidden="true"></span>
+              <span class="lhd-handle" data-edge="bottom" aria-hidden="true"></span>
+              <span class="lhd-handle" data-edge="left" aria-hidden="true"></span>
+              <span class="lhd-handle" data-edge="right" aria-hidden="true"></span>
+            </div>
+          </div>
+        </div>
+        <div class="lhd-side">
+          <p class="lhd-desc" data-i18n="lhd.desc"></p>
+          <div class="field"><label for="lhdName" data-i18n="lhd.name">Antet adı</label><input class="input" id="lhdName" data-i18n-attr="placeholder:lhd.namePh" maxlength="60"></div>
+          <div class="lhd-margins">
+            <div class="field"><label for="lhdTop" data-i18n="lhd.top">Üst (mm)</label><input class="input" type="number" id="lhdTop" data-edge="top" min="5" max="200" step="1"></div>
+            <div class="field"><label for="lhdBottom" data-i18n="lhd.bottom">Alt (mm)</label><input class="input" type="number" id="lhdBottom" data-edge="bottom" min="5" max="200" step="1"></div>
+            <div class="field"><label for="lhdLeft" data-i18n="lhd.left">Sol (mm)</label><input class="input" type="number" id="lhdLeft" data-edge="left" min="5" max="100" step="1"></div>
+            <div class="field"><label for="lhdRight" data-i18n="lhd.right">Sağ (mm)</label><input class="input" type="number" id="lhdRight" data-edge="right" min="5" max="100" step="1"></div>
+          </div>
+          <fieldset class="lhd-apply">
+            <legend class="field-label" data-i18n="lhd.apply">Antet hangi sayfalarda?</legend>
+            <label class="check"><input type="radio" name="lhdApply" value="all"><span data-i18n="lhd.applyAll">Her sayfada</span></label>
+            <label class="check"><input type="radio" name="lhdApply" value="first"><span data-i18n="lhd.applyFirst">Yalnızca ilk sayfada</span></label>
+          </fieldset>
+          <p class="chip chip--ok lhd-auto" id="lhdAuto"><span data-i18n="lhd.auto">Kenar boşlukları otomatik önerildi.</span></p>
+          <ul class="lhd-notes" id="lhdNotes"></ul>
+        </div>
+      </div>
+      <footer class="dialog-foot">
+        <button class="btn btn--quiet" value="cancel" type="submit" data-i18n="lhd.cancel">Vazgeç</button>
+        <button class="btn btn--primary" value="save" type="submit" id="lhdSave" data-i18n="lhd.save">Kaydet ve seç</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <div class="toast-region" aria-live="polite"></div>
+
+  <noscript><p style="padding:24px;text-align:center">Bu araç JavaScript gerektirir. / This tool requires JavaScript.</p></noscript>
+  <script type="module" src="assets/js/app/main.js"></script>
+</body>
+</html>

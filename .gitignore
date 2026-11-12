@@ -1,0 +1,21 @@
+# --- Sistem ve editör ---
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
+
+# --- Test belgeleri (depoya girmez) ---
+test_document/
+
+# --- Bağımlılıklar ---
+node_modules/
+
+# --- Masaüstü uygulaması: üretilen dosyalar ---
+# desktop/app = Vite çıktısı, desktop/public/* = derlemede kopyalanan vendor/yazı tipleri, dist = kurulum paketleri
+# (kök vendor/ ve assets/ KAYNAKTIR, yok sayılmaz)
+desktop/app/
+desktop/dist/
+desktop/public/vendor/
+desktop/public/assets/
+desktop/public/favicon.svg

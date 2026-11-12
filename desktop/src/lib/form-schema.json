@@ -1,0 +1,1826 @@
+{
+ "sections": [
+  {
+   "letter": "A",
+   "titleKey": "sec.doc",
+   "nodes": [
+    {
+     "kind": "field",
+     "bind": "meta.invoiceNo",
+     "control": "input",
+     "labelKey": "f.invoiceNo",
+     "labelText": "Fatura no",
+     "span": 1,
+     "type": "text",
+     "placeholderKey": "f.invoiceNoPh"
+    },
+    {
+     "kind": "field",
+     "bind": "meta.invoiceDate",
+     "control": "input",
+     "labelKey": "f.invoiceDate",
+     "labelText": "Fatura tarihi",
+     "span": 1,
+     "type": "date"
+    },
+    {
+     "kind": "field",
+     "bind": "meta.currency",
+     "control": "input",
+     "labelKey": "f.currency",
+     "labelText": "Para birimi",
+     "span": 1,
+     "type": "text",
+     "list": "dl-currency",
+     "maxlength": "5",
+     "autocapitalize": "characters"
+    },
+    {
+     "kind": "field",
+     "bind": "meta.proformaNo",
+     "control": "input",
+     "labelKey": "f.proformaNo",
+     "labelText": "Proforma no",
+     "span": 1,
+     "type": "text"
+    },
+    {
+     "kind": "field",
+     "bind": "meta.proformaDate",
+     "control": "input",
+     "labelKey": "f.proformaDate",
+     "labelText": "Proforma tarihi",
+     "span": 1,
+     "type": "date"
+    },
+    {
+     "kind": "field",
+     "bind": "meta.orderRef",
+     "control": "input",
+     "labelKey": "f.orderRef",
+     "labelText": "Sipariş / PO no",
+     "span": 1,
+     "type": "text"
+    },
+    {
+     "kind": "field",
+     "bind": "meta.plNo",
+     "control": "input",
+     "labelKey": "f.plNo",
+     "labelText": "Packing list no",
+     "span": 1,
+     "type": "text",
+     "placeholderKey": "f.plNoPh"
+    }
+   ]
+  },
+  {
+   "letter": "B",
+   "titleKey": "sec.parties",
+   "nodes": []
+  },
+  {
+   "letter": "C",
+   "titleKey": "sec.shipment",
+   "nodes": [
+    {
+     "kind": "field",
+     "bind": "shipment.incoterm",
+     "control": "select",
+     "labelKey": "f.incoterm",
+     "labelText": "Teslim şekli",
+     "span": 1,
+     "options": []
+    },
+    {
+     "kind": "field",
+     "bind": "shipment.incotermPlace",
+     "control": "input",
+     "labelKey": "f.incotermPlace",
+     "labelText": "Teslim yeri",
+     "span": 1,
+     "type": "text",
+     "placeholderKey": "f.incotermPlacePh"
+    },
+    {
+     "kind": "field",
+     "bind": "shipment.transportMode",
+     "control": "select",
+     "labelKey": "f.transportMode",
+     "labelText": "Taşıma şekli",
+     "span": 1,
+     "options": []
+    },
+    {
+     "kind": "field",
+     "bind": "shipment.paymentTerms",
+     "control": "input",
+     "labelKey": "f.paymentTerms",
+     "labelText": "Ödeme şekli",
+     "span": 3,
+     "type": "text",
+     "placeholderKey": "f.paymentTermsPh"
+    },
+    {
+     "kind": "field",
+     "bind": "shipment.portLoading",
+     "control": "input",
+     "labelKey": "f.portLoading",
+     "labelText": "Yükleme limanı",
+     "span": 1,
+     "type": "text"
+    },
+    {
+     "kind": "field",
+     "bind": "shipment.portDischarge",
+     "control": "input",
+     "labelKey": "f.portDischarge",
+     "labelText": "Varış limanı",
+     "span": 1,
+     "type": "text"
+    },
+    {
+     "kind": "field",
+     "bind": "shipment.finalDestination",
+     "control": "input",
+     "labelKey": "f.finalDestination",
+     "labelText": "Nihai varış yeri",
+     "span": 1,
+     "type": "text"
+    },
+    {
+     "kind": "field",
+     "bind": "shipment.countryOrigin",
+     "control": "input",
+     "labelKey": "f.countryOrigin",
+     "labelText": "Menşe ülkesi",
+     "span": 1,
+     "type": "text",
+     "placeholderKey": "f.countryOriginPh"
+    },
+    {
+     "kind": "field",
+     "bind": "shipment.countryDestination",
+     "control": "input",
+     "labelKey": "f.countryDestination",
+     "labelText": "Varış ülkesi",
+     "span": 1,
+     "type": "text"
+    },
+    {
+     "kind": "field",
+     "bind": "shipment.shipmentDate",
+     "control": "input",
+     "labelKey": "f.shipmentDate",
+     "labelText": "Sevk tarihi",
+     "span": 1,
+     "type": "date"
+    },
+    {
+     "kind": "field",
+     "bind": "shipment.vessel",
+     "control": "input",
+     "labelKey": "f.vessel",
+     "labelText": "Gemi / uçuş / araç",
+     "span": 1,
+     "type": "text"
+    },
+    {
+     "kind": "field",
+     "bind": "shipment.containerNo",
+     "control": "input",
+     "labelKey": "f.containerNo",
+     "labelText": "Konteyner / mühür no",
+     "span": 1,
+     "type": "text"
+    }
+   ]
+  },
+  {
+   "letter": "D",
+   "titleKey": "sec.items",
+   "nodes": []
+  },
+  {
+   "letter": "E",
+   "titleKey": "sec.charges",
+   "nodes": [
+    {
+     "kind": "field",
+     "bind": "charges.freight",
+     "control": "input",
+     "labelKey": "f.freight",
+     "labelText": "Navlun",
+     "span": 1,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "charges.insurance",
+     "control": "input",
+     "labelKey": "f.insurance",
+     "labelText": "Sigorta",
+     "span": 1,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "charges.discount",
+     "control": "input",
+     "labelKey": "f.discount",
+     "labelText": "İndirim",
+     "span": 1,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "charges.otherLabel",
+     "control": "input",
+     "labelKey": "f.otherLabel",
+     "labelText": "Diğer masraf adı",
+     "span": 2,
+     "type": "text",
+     "placeholderKey": "f.otherLabelPh",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "charges.other",
+     "control": "input",
+     "labelKey": "f.other",
+     "labelText": "Diğer masraf tutarı",
+     "span": 1,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "charges.vatRate",
+     "control": "input",
+     "labelKey": "f.vatRate",
+     "labelText": "KDV oranı (%)",
+     "span": 1,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "charges.vat",
+     "control": "input",
+     "labelKey": "f.vat",
+     "labelText": "KDV tutarı",
+     "span": 1,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "check",
+     "bind": "options.amountInWords",
+     "labelKey": "f.amountInWords",
+     "labelText": "Toplam tutarı yazıyla göster",
+     "span": 1
+    }
+   ]
+  },
+  {
+   "letter": "F",
+   "titleKey": "sec.packing",
+   "nodes": [
+    {
+     "kind": "field",
+     "bind": "packing.packageType",
+     "control": "input",
+     "labelKey": "f.packageType",
+     "labelText": "Varsayılan kap cinsi",
+     "span": 1,
+     "type": "text",
+     "list": "dl-pkg",
+     "autocapitalize": "characters",
+     "grid": 0,
+     "cols": 2
+    },
+    {
+     "kind": "field",
+     "bind": "packing.marks",
+     "control": "textarea",
+     "labelKey": "f.marks",
+     "labelText": "Marka ve numaralar",
+     "span": 1,
+     "rows": "2",
+     "placeholderKey": "f.marksPh",
+     "grid": 0,
+     "cols": 2
+    },
+    {
+     "kind": "sub",
+     "labelKey": "f.totalsTitle",
+     "hintKey": "f.totalsHint"
+    },
+    {
+     "kind": "field",
+     "bind": "packing.totalPackages",
+     "control": "input",
+     "labelKey": "f.totalPackages",
+     "labelText": "Toplam kap",
+     "span": 1,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 1,
+     "cols": 4
+    },
+    {
+     "kind": "field",
+     "bind": "packing.totalNet",
+     "control": "input",
+     "labelKey": "f.totalNet",
+     "labelText": "Toplam net (kg)",
+     "span": 1,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 1,
+     "cols": 4
+    },
+    {
+     "kind": "field",
+     "bind": "packing.totalGross",
+     "control": "input",
+     "labelKey": "f.totalGross",
+     "labelText": "Toplam brüt (kg)",
+     "span": 1,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 1,
+     "cols": 4
+    },
+    {
+     "kind": "field",
+     "bind": "packing.totalVolume",
+     "control": "input",
+     "labelKey": "f.totalVolume",
+     "labelText": "Toplam hacim (m³)",
+     "span": 1,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 1,
+     "cols": 4
+    },
+    {
+     "kind": "check",
+     "bind": "options.showWeightsOnInvoice",
+     "labelKey": "f.showWeightsOnInvoice",
+     "labelText": "Ağırlık özetini faturada göster",
+     "span": 1
+    },
+    {
+     "kind": "check",
+     "bind": "options.showHsOnPl",
+     "labelKey": "f.showHsOnPl",
+     "labelText": "Packing list'te HS kodunu göster",
+     "span": 1
+    }
+   ]
+  },
+  {
+   "letter": "G",
+   "titleKey": "sec.bank",
+   "nodes": [
+    {
+     "kind": "check",
+     "bind": "bank.show",
+     "labelKey": "f.bankShow",
+     "labelText": "Banka bilgilerini faturada göster",
+     "span": 1
+    },
+    {
+     "kind": "field",
+     "bind": "bank.bankName",
+     "control": "input",
+     "labelKey": "f.bankName",
+     "labelText": "Banka",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "bank.branch",
+     "control": "input",
+     "labelKey": "f.branch",
+     "labelText": "Şube",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "bank.accountName",
+     "control": "input",
+     "labelKey": "f.accountName",
+     "labelText": "Hesap sahibi",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "bank.iban",
+     "control": "input",
+     "labelKey": "f.iban",
+     "labelText": "IBAN",
+     "span": 2,
+     "type": "text",
+     "autocapitalize": "characters",
+     "mono": true,
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "bank.swift",
+     "control": "input",
+     "labelKey": "f.swift",
+     "labelText": "SWIFT / BIC",
+     "span": 1,
+     "type": "text",
+     "autocapitalize": "characters",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "bank.accountNo",
+     "control": "input",
+     "labelKey": "f.accountNo",
+     "labelText": "Hesap no",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    }
+   ]
+  },
+  {
+   "letter": "H",
+   "titleKey": "sec.sign",
+   "nodes": [
+    {
+     "kind": "check",
+     "bind": "sign.showDeclaration",
+     "labelKey": "f.showDeclaration",
+     "labelText": "Beyan metnini göster",
+     "span": 1
+    },
+    {
+     "kind": "field",
+     "bind": "sign.declaration",
+     "control": "textarea",
+     "labelKey": "f.declaration",
+     "labelText": "Beyan metni",
+     "span": 1,
+     "rows": "3"
+    },
+    {
+     "kind": "field",
+     "bind": "sign.name",
+     "control": "input",
+     "labelKey": "f.signName",
+     "labelText": "Yetkili adı",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "sign.title",
+     "control": "input",
+     "labelKey": "f.signTitle",
+     "labelText": "Unvanı",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "sign.place",
+     "control": "input",
+     "labelKey": "f.signPlace",
+     "labelText": "Düzenlenme yeri",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "options.paper",
+     "control": "select",
+     "labelKey": "f.paper",
+     "labelText": "Kağıt boyutu",
+     "span": 1,
+     "options": [
+      {
+       "value": "A4",
+       "text": "A4",
+       "labelKey": null,
+       "en": false
+      },
+      {
+       "value": "LETTER",
+       "text": "Letter",
+       "labelKey": null,
+       "en": false
+      }
+     ],
+     "grid": 0,
+     "cols": 3
+    }
+   ]
+  },
+  {
+   "letter": "I",
+   "titleKey": "sec.ship",
+   "nodes": [
+    {
+     "kind": "field",
+     "bind": "ship.siNo",
+     "control": "input",
+     "labelKey": "f.siNo",
+     "labelText": "S.I. no",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ship.blNo",
+     "control": "input",
+     "labelKey": "f.blNo",
+     "labelText": "B/L no",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ship.bookingNo",
+     "control": "input",
+     "labelKey": "f.bookingNo",
+     "labelText": "Booking no",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ship.carrier",
+     "control": "input",
+     "labelKey": "f.carrier",
+     "labelText": "Taşıyıcı / hat",
+     "span": 2,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ship.originals",
+     "control": "input",
+     "labelKey": "f.originals",
+     "labelText": "Orijinal B/L sayısı",
+     "span": 1,
+     "type": "text",
+     "inputmode": "numeric",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ship.placeReceipt",
+     "control": "input",
+     "labelKey": "f.placeReceipt",
+     "labelText": "Teslim alma yeri",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ship.placeDelivery",
+     "control": "input",
+     "labelKey": "f.placeDelivery",
+     "labelText": "Teslim yeri",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ship.freightTerms",
+     "control": "select",
+     "labelKey": "f.freightTerms",
+     "labelText": "Navlun ödemesi",
+     "span": 1,
+     "options": [
+      {
+       "value": "",
+       "text": "—",
+       "labelKey": "opt.none",
+       "en": false
+      },
+      {
+       "value": "prepaid",
+       "text": "Freight prepaid",
+       "labelKey": null,
+       "en": true
+      },
+      {
+       "value": "collect",
+       "text": "Freight collect",
+       "labelKey": null,
+       "en": true
+      }
+     ],
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ship.blType",
+     "control": "select",
+     "labelKey": "f.blType",
+     "labelText": "B/L türü",
+     "span": 1,
+     "options": [
+      {
+       "value": "",
+       "text": "—",
+       "labelKey": "opt.none",
+       "en": false
+      },
+      {
+       "value": "original",
+       "text": "Original B/L",
+       "labelKey": null,
+       "en": true
+      },
+      {
+       "value": "surrender",
+       "text": "Telex release / surrendered",
+       "labelKey": null,
+       "en": true
+      },
+      {
+       "value": "seaway",
+       "text": "Sea waybill",
+       "labelKey": null,
+       "en": true
+      }
+     ],
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ship.forwarder",
+     "control": "textarea",
+     "labelKey": "f.forwarder",
+     "labelText": "Forwarder / acente (yalnızca talimatta)",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ship.goodsDescription",
+     "control": "textarea",
+     "labelKey": "f.goodsDesc",
+     "labelText": "Mal tanımı (boşsa kalemlerden)",
+     "span": 3,
+     "rows": "3",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ship.instructions",
+     "control": "textarea",
+     "labelKey": "f.instructions",
+     "labelText": "Özel talimatlar",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    }
+   ]
+  },
+  {
+   "letter": "J",
+   "titleKey": "sec.origin",
+   "nodes": [
+    {
+     "kind": "field",
+     "bind": "origin.certNo",
+     "control": "input",
+     "labelKey": "f.originNo",
+     "labelText": "Beyan no",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "origin.statement",
+     "control": "textarea",
+     "labelKey": "f.originStmt",
+     "labelText": "Beyan metni",
+     "span": 1,
+     "rows": "4",
+     "hintKey": "f.originHint"
+    }
+   ]
+  },
+  {
+   "letter": "K",
+   "titleKey": "sec.instr",
+   "nodes": [
+    {
+     "kind": "field",
+     "bind": "instr.toLoading",
+     "control": "textarea",
+     "labelKey": "f.toLoading",
+     "labelText": "Yükleme talimatı muhatabı (depo / yükleme yeri)",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "instr.loadingPlace",
+     "control": "input",
+     "labelKey": "f.loadPlace",
+     "labelText": "Yükleme yeri",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "instr.loadingDate",
+     "control": "input",
+     "labelKey": "f.loadDate",
+     "labelText": "Yükleme tarihi",
+     "span": 1,
+     "type": "date",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "instr.loadContact",
+     "control": "input",
+     "labelKey": "f.loadContact",
+     "labelText": "Yükleme yeri irtibat",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "instr.vehicle",
+     "control": "input",
+     "labelKey": "f.vehicle",
+     "labelText": "Araç plakası",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "instr.driver",
+     "control": "input",
+     "labelKey": "f.driver",
+     "labelText": "Sürücü",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "instr.loadNotes",
+     "control": "textarea",
+     "labelKey": "f.loadNotes",
+     "labelText": "Yükleme notları",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "instr.toCoo",
+     "control": "textarea",
+     "labelKey": "f.toCoo",
+     "labelText": "Menşe şahadetnamesi talimatı muhatabı (oda / müşavir)",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "instr.toEur1",
+     "control": "textarea",
+     "labelKey": "f.toEur1",
+     "labelText": "EUR.1 talimatı muhatabı (gümrük müşaviri)",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "instr.copies",
+     "control": "input",
+     "labelKey": "f.copies",
+     "labelText": "İstenen nüsha sayısı",
+     "span": 1,
+     "type": "text",
+     "inputmode": "numeric",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "instr.eur1Criterion",
+     "control": "input",
+     "labelKey": "f.eur1Criterion",
+     "labelText": "Menşe kriteri (EUR.1)",
+     "span": 1,
+     "type": "text",
+     "placeholder": "e.g. sufficiently processed",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "instr.eur1Agreement",
+     "control": "input",
+     "labelKey": "f.eur1Agreement",
+     "labelText": "Anlaşma / tercih (EUR.1)",
+     "span": 1,
+     "type": "text",
+     "placeholder": "e.g. EU-Türkiye Customs Union",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "instr.certNotes",
+     "control": "textarea",
+     "labelKey": "f.certNotes",
+     "labelText": "Şahadetname / EUR.1 notları",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    }
+   ]
+  },
+  {
+   "letter": "L",
+   "titleKey": "sec.ins",
+   "nodes": [
+    {
+     "kind": "field",
+     "bind": "ins.to",
+     "control": "textarea",
+     "labelKey": "f.insTo",
+     "labelText": "Muhatap (sigortacı / acente)",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ins.coverage",
+     "control": "input",
+     "labelKey": "f.insCoverage",
+     "labelText": "Teminat",
+     "span": 2,
+     "type": "text",
+     "list": "dl-cov",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ins.extraPct",
+     "control": "input",
+     "labelKey": "f.insPct",
+     "labelText": "Fatura değerine ek (%)",
+     "span": 1,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ins.insuredParty",
+     "control": "select",
+     "labelKey": "f.insWho",
+     "labelText": "Sigortalı",
+     "span": 1,
+     "options": [
+      {
+       "value": "seller",
+       "text": "Satıcı",
+       "labelKey": "f.insSeller",
+       "en": false
+      },
+      {
+       "value": "buyer",
+       "text": "Alıcı",
+       "labelKey": "f.insBuyer",
+       "en": false
+      }
+     ],
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ins.claimsPayableAt",
+     "control": "input",
+     "labelKey": "f.insClaims",
+     "labelText": "Hasar ödeme yeri",
+     "span": 2,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "ins.notes",
+     "control": "textarea",
+     "labelKey": "f.insNotes",
+     "labelText": "Özel şartlar",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    }
+   ]
+  },
+  {
+   "letter": "M",
+   "titleKey": "sec.trans",
+   "nodes": [
+    {
+     "kind": "field",
+     "bind": "trans.to",
+     "control": "textarea",
+     "labelKey": "f.trTo",
+     "labelText": "Muhatap (nakliyeci)",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "trans.loadAddress",
+     "control": "input",
+     "labelKey": "f.trLoadAddr",
+     "labelText": "Yükleme adresi",
+     "span": 2,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "trans.loadDate",
+     "control": "input",
+     "labelKey": "f.trLoadDate",
+     "labelText": "Yükleme tarihi",
+     "span": 1,
+     "type": "date",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "trans.unloadAddress",
+     "control": "input",
+     "labelKey": "f.trUnloadAddr",
+     "labelText": "Boşaltma adresi",
+     "span": 2,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "trans.deliveryDate",
+     "control": "input",
+     "labelKey": "f.trDelDate",
+     "labelText": "Teslim tarihi",
+     "span": 1,
+     "type": "date",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "trans.vehicleType",
+     "control": "input",
+     "labelKey": "f.trVehicle",
+     "labelText": "Araç tipi",
+     "span": 1,
+     "type": "text",
+     "placeholder": "e.g. 13.6 m tautliner",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "trans.freight",
+     "control": "input",
+     "labelKey": "f.trFreight",
+     "labelText": "Anlaşılan navlun",
+     "span": 1,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "trans.paymentTerms",
+     "control": "input",
+     "labelKey": "f.trPayment",
+     "labelText": "Ödeme şartı",
+     "span": 1,
+     "type": "text",
+     "placeholder": "e.g. 30 days after delivery",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "trans.notes",
+     "control": "textarea",
+     "labelKey": "f.trNotes",
+     "labelText": "Ek şartlar",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    }
+   ]
+  },
+  {
+   "letter": "N",
+   "titleKey": "sec.prealert",
+   "nodes": [
+    {
+     "kind": "field",
+     "bind": "preAlert.to",
+     "control": "input",
+     "labelKey": "f.paTo",
+     "labelText": "Muhatap (boşsa alıcı)",
+     "span": 2,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "preAlert.eta",
+     "control": "input",
+     "labelKey": "f.paEta",
+     "labelText": "Tahmini varış (ETA)",
+     "span": 1,
+     "type": "date",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "preAlert.docsExtra",
+     "control": "textarea",
+     "labelKey": "f.paDocs",
+     "labelText": "Ek eklenen belgeler (satır satır)",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "preAlert.notes",
+     "control": "textarea",
+     "labelKey": "f.paNotes",
+     "labelText": "Notlar",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    }
+   ]
+  },
+  {
+   "letter": "O",
+   "titleKey": "sec.pallets",
+   "nodes": []
+  },
+  {
+   "letter": "P",
+   "titleKey": "sec.cmr",
+   "nodes": [
+    {
+     "kind": "field",
+     "bind": "cmr.carrier",
+     "control": "textarea",
+     "labelKey": "f.cmrCarrier",
+     "labelText": "",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "cmr.plate",
+     "control": "input",
+     "labelKey": "f.cmrPlate",
+     "labelText": "",
+     "span": 2,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "cmr.packing",
+     "control": "input",
+     "labelKey": "f.cmrPacking",
+     "labelText": "",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "cmr.takingPlace",
+     "control": "input",
+     "labelKey": "f.cmrTakingPlace",
+     "labelText": "",
+     "span": 2,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "cmr.takingDate",
+     "control": "input",
+     "labelKey": "f.cmrTakingDate",
+     "labelText": "",
+     "span": 1,
+     "type": "date",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "cmr.deliveryPlace",
+     "control": "input",
+     "labelKey": "f.cmrDelivery",
+     "labelText": "",
+     "span": 3,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "cmr.docs",
+     "control": "input",
+     "labelKey": "f.cmrDocs",
+     "labelText": "",
+     "span": 3,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "cmr.payment",
+     "control": "select",
+     "labelKey": "f.cmrPayment",
+     "labelText": "Navlun ödemesi",
+     "span": 1,
+     "options": [
+      {
+       "value": "paid",
+       "text": "Carriage paid (sender)",
+       "labelKey": null,
+       "en": true
+      },
+      {
+       "value": "forward",
+       "text": "Carriage forward (consignee)",
+       "labelKey": null,
+       "en": true
+      }
+     ],
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "cmr.cod",
+     "control": "input",
+     "labelKey": "f.cmrCod",
+     "labelText": "",
+     "span": 2,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "cmr.instructions",
+     "control": "textarea",
+     "labelKey": "f.cmrInstr",
+     "labelText": "",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "cmr.reservations",
+     "control": "textarea",
+     "labelKey": "f.cmrReservations",
+     "labelText": "",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "cmr.special",
+     "control": "textarea",
+     "labelKey": "f.cmrSpecial",
+     "labelText": "",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    }
+   ]
+  },
+  {
+   "letter": "Q",
+   "titleKey": "sec.poa",
+   "nodes": [
+    {
+     "kind": "field",
+     "bind": "poa.attorney",
+     "control": "textarea",
+     "labelKey": "f.poaAttorney",
+     "labelText": "",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "poa.grantor",
+     "control": "select",
+     "labelKey": "f.poaGrantor",
+     "labelText": "Vekalet veren",
+     "span": 1,
+     "options": [
+      {
+       "value": "seller",
+       "text": "Satıcı",
+       "labelKey": "f.insSeller",
+       "en": false
+      },
+      {
+       "value": "buyer",
+       "text": "Alıcı",
+       "labelKey": "f.insBuyer",
+       "en": false
+      }
+     ],
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "poa.country",
+     "control": "input",
+     "labelKey": "f.poaCountry",
+     "labelText": "",
+     "span": 2,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "poa.validFrom",
+     "control": "input",
+     "labelKey": "f.poaFrom",
+     "labelText": "",
+     "span": 1,
+     "type": "date",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "poa.validUntil",
+     "control": "input",
+     "labelKey": "f.poaUntil",
+     "labelText": "",
+     "span": 1,
+     "type": "date",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "poa.scope",
+     "control": "textarea",
+     "labelKey": "f.poaScope",
+     "labelText": "",
+     "span": 3,
+     "rows": "6",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "poa.notes",
+     "control": "textarea",
+     "labelKey": "f.poaNotes",
+     "labelText": "",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    }
+   ]
+  },
+  {
+   "letter": "R",
+   "titleKey": "sec.contract",
+   "nodes": [
+    {
+     "kind": "field",
+     "bind": "contract.no",
+     "control": "input",
+     "labelKey": "f.scNo",
+     "labelText": "",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "contract.place",
+     "control": "input",
+     "labelKey": "f.scPlace",
+     "labelText": "",
+     "span": 2,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "contract.delivery",
+     "control": "textarea",
+     "labelKey": "f.scDelivery",
+     "labelText": "",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "contract.lateInterest",
+     "control": "input",
+     "labelKey": "f.scLate",
+     "labelText": "",
+     "span": 3,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "contract.warranty",
+     "control": "textarea",
+     "labelKey": "f.scWarranty",
+     "labelText": "",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "contract.claims",
+     "control": "textarea",
+     "labelKey": "f.scClaims",
+     "labelText": "",
+     "span": 3,
+     "rows": "3",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "contract.documents",
+     "control": "input",
+     "labelKey": "f.scDocs",
+     "labelText": "",
+     "span": 3,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "contract.law",
+     "control": "textarea",
+     "labelKey": "f.scLaw",
+     "labelText": "",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "contract.disputes",
+     "control": "textarea",
+     "labelKey": "f.scDisputes",
+     "labelText": "",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "check",
+     "bind": "contract.forceMajeure",
+     "labelKey": "f.scFm",
+     "labelText": "",
+     "span": 3,
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "contract.extra",
+     "control": "textarea",
+     "labelKey": "f.scExtra",
+     "labelText": "",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    }
+   ]
+  },
+  {
+   "letter": "S",
+   "titleKey": "sec.bill",
+   "nodes": [
+    {
+     "kind": "field",
+     "bind": "bill.kind",
+     "control": "select",
+     "labelKey": "f.bKind",
+     "labelText": "",
+     "span": 1,
+     "options": [
+      {
+       "value": "draft",
+       "text": "Bill of exchange (draft)",
+       "labelKey": null,
+       "en": true
+      },
+      {
+       "value": "note",
+       "text": "Promissory note",
+       "labelKey": null,
+       "en": true
+      }
+     ],
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "bill.set",
+     "control": "select",
+     "labelKey": "f.bSet",
+     "labelText": "",
+     "span": 1,
+     "options": [
+      {
+       "value": "first",
+       "text": "First of exchange",
+       "labelKey": null,
+       "en": true
+      },
+      {
+       "value": "second",
+       "text": "Second of exchange",
+       "labelKey": null,
+       "en": true
+      }
+     ],
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "bill.no",
+     "control": "input",
+     "labelKey": "f.bNo",
+     "labelText": "",
+     "span": 1,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "bill.tenor",
+     "control": "select",
+     "labelKey": "f.bTenor",
+     "labelText": "",
+     "span": 1,
+     "options": [
+      {
+       "value": "sight",
+       "text": "At sight",
+       "labelKey": null,
+       "en": true
+      },
+      {
+       "value": "afterSight",
+       "text": "Days after sight",
+       "labelKey": null,
+       "en": true
+      },
+      {
+       "value": "afterBL",
+       "text": "Days after B/L date",
+       "labelKey": null,
+       "en": true
+      },
+      {
+       "value": "afterInvoice",
+       "text": "Days after invoice date",
+       "labelKey": null,
+       "en": true
+      },
+      {
+       "value": "fixed",
+       "text": "Fixed due date",
+       "labelKey": null,
+       "en": true
+      }
+     ],
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "bill.days",
+     "control": "input",
+     "labelKey": "f.bDays",
+     "labelText": "",
+     "span": 1,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "bill.dueDate",
+     "control": "input",
+     "labelKey": "f.bDue",
+     "labelText": "",
+     "span": 1,
+     "type": "date",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "bill.amount",
+     "control": "input",
+     "labelKey": "f.bAmount",
+     "labelText": "",
+     "span": 1,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "bill.place",
+     "control": "input",
+     "labelKey": "f.bPlace",
+     "labelText": "",
+     "span": 2,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "bill.payTo",
+     "control": "input",
+     "labelKey": "f.bPayTo",
+     "labelText": "",
+     "span": 3,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "bill.drawnUnder",
+     "control": "input",
+     "labelKey": "f.bUnder",
+     "labelText": "",
+     "span": 3,
+     "type": "text",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "bill.aval",
+     "control": "textarea",
+     "labelKey": "f.bAval",
+     "labelText": "",
+     "span": 3,
+     "rows": "2",
+     "grid": 0,
+     "cols": 3
+    }
+   ]
+  },
+  {
+   "letter": "T",
+   "titleKey": "sec.labels",
+   "nodes": [
+    {
+     "kind": "field",
+     "bind": "labels.format",
+     "control": "select",
+     "labelKey": "f.lbFormat",
+     "labelText": "",
+     "span": 1,
+     "options": [
+      {
+       "value": "a6x4",
+       "text": "A6, 4 per A4 sheet",
+       "labelKey": null,
+       "en": true
+      },
+      {
+       "value": "a5x2",
+       "text": "A5, 2 per A4 sheet",
+       "labelKey": null,
+       "en": true
+      },
+      {
+       "value": "thermal",
+       "text": "100 x 150 mm thermal printer",
+       "labelKey": null,
+       "en": true
+      }
+     ],
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "labels.source",
+     "control": "select",
+     "labelKey": "f.lbSource",
+     "labelText": "",
+     "span": 1,
+     "options": [
+      {
+       "value": "packages",
+       "text": "One per package (X / N)",
+       "labelKey": null,
+       "en": true
+      },
+      {
+       "value": "pallets",
+       "text": "One per pallet row (from pallet list)",
+       "labelKey": null,
+       "en": true
+      }
+     ],
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "labels.count",
+     "control": "input",
+     "labelKey": "f.lbCount",
+     "labelText": "",
+     "span": 1,
+     "type": "text",
+     "inputmode": "decimal",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "field",
+     "bind": "labels.banner",
+     "control": "input",
+     "labelKey": "f.lbBanner",
+     "labelText": "",
+     "span": 2,
+     "type": "text",
+     "maxlength": "36",
+     "placeholder": "e.g. FRAGILE - KEEP DRY",
+     "grid": 0,
+     "cols": 3
+    },
+    {
+     "kind": "check",
+     "bind": "labels.showSeller",
+     "labelKey": "f.lbSeller",
+     "labelText": "",
+     "span": 3,
+     "grid": 0,
+     "cols": 3
+    }
+   ]
+  }
+ ]
+}

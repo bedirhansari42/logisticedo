@@ -1,0 +1,86 @@
+{
+  "name": "logisticedo-desktop",
+  "productName": "logisticedo",
+  "version": "1.0.0",
+  "description": "Lojistikçiler için masaüstü belge araçları (commercial invoice, packing list, B/L, CMR ve diğerleri)",
+  "author": "logisticedo",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "assets": "node scripts/assets.mjs",
+    "dev": "npm run assets && vite",
+    "build": "npm run assets && vite build",
+    "start": "npm run build && node scripts/dev-name.mjs && electron .",
+    "electron": "node scripts/dev-name.mjs && electron .",
+    "schema": "python3 scripts/extract-form-schema.py",
+    "dist:mac": "npm run build && electron-builder --mac --universal",
+    "dist:win": "npm run build && electron-builder --win --x64",
+    "dist": "npm run dist:mac && npm run dist:win",
+    "test:planner": "node --test src/planner/*.test.mjs"
+  },
+  "build": {
+    "appId": "com.logisticedo.desktop",
+    "productName": "logisticedo",
+    "copyright": "© 2026 logisticedo",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "package.json",
+      "app/**/*"
+    ],
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.business",
+      "target": [
+        {
+          "target": "dmg"
+        },
+        {
+          "target": "zip"
+        }
+      ],
+      "icon": "build/icon.icns"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "${productName}-Setup-${version}-win-x64.${ext}"
+    },
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}-win-x64.${ext}"
+    }
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.3.0",
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0",
+    "vite": "^8.3.7"
+  },
+  "dependencies": {
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  }
+}
