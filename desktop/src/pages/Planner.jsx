@@ -9,6 +9,7 @@ import { planAll } from "../planner/pack.mjs";
 import { TopView, LayerView, IsoView, makeColorOf, LABEL_LIMIT } from "../components/planner/PlanViews.jsx";
 
 const isBlank = (r) => !r.name && !r.l && !r.w && !r.h && !r.qty && !r.weight && !r.palletized && !r.upright;
+const ORIENT_KEYS = ["any", "up", "lying"];
 
 /** Hesabı Web Worker'da yapar; worker açılamazsa ana iş parçacığında çalıştırır. */
 function useCalculator() {
@@ -137,25 +138,45 @@ export function Planner() {
         <p className="muted pl-hint">{t("d.pl.qtyHint")} {t("d.pl.palletHint")}</p>
         <div className="pl-scroll">
           <div className="pl-grid pl-grid--head" aria-hidden="true">
-            <span>{t("d.pl.col.name")}</span><span>{t("d.pl.col.l")}</span><span>{t("d.pl.col.w")}</span><span>{t("d.pl.col.h")}</span>
+            <span>{t("d.pl.col.name")}</span><span>{t("d.pl.col.shape")}</span><span>{t("d.pl.col.l")}</span><span>{t("d.pl.col.w")}</span><span>{t("d.pl.col.h")}</span>
             <span>{t("d.pl.col.qty")}</span><span>{t("d.pl.col.weight")}</span><span>{t("d.pl.col.pallet")}</span><span>{t("d.pl.col.upright")}</span><span />
           </div>
           {rows.map((r) => (
             <div className="pl-row" key={r.id}>
               <div className="pl-grid">
                 <input className="input" value={r.name} onChange={(e) => setRow(r.id, { name: e.target.value })} aria-label={t("d.pl.col.name")} />
-                {["l", "w", "h"].map((f) => (
-                  <input key={f} className={`input${fieldErr(r, f) ? " is-bad" : ""}`} inputMode="decimal" value={r[f]} onChange={(e) => setRow(r.id, { [f]: e.target.value })} aria-label={t(`d.pl.col.${f}`)} aria-invalid={!!fieldErr(r, f)} />
-                ))}
+                <select className="select" value={r.shape || "box"} onChange={(e) => setRow(r.id, { shape: e.target.value })} aria-label={t("d.pl.col.shape")}>
+                  <option value="box">{t("d.pl.shape.box")}</option>
+                  <option value="cyl">{t("d.pl.shape.cyl")}</option>
+                </select>
+                {["l", "w", "h"].map((f) => {
+                  const cyl = r.shape === "cyl";
+                  const off = cyl && f === "h";
+                  const label = cyl ? t(f === "l" ? "d.pl.cyl.len" : f === "w" ? "d.pl.cyl.dia" : "d.pl.col.h") : t(`d.pl.col.${f}`);
+                  return (
+                    <input key={f} className={`input${fieldErr(r, f) ? " is-bad" : ""}`} inputMode="decimal" value={off ? "" : r[f]} placeholder={cyl ? (off ? "—" : label) : undefined} disabled={off} onChange={(e) => setRow(r.id, { [f]: e.target.value })} aria-label={label} aria-invalid={!!fieldErr(r, f)} />
+                  );
+                })}
                 <input className={`input${fieldErr(r, "qty") ? " is-bad" : ""}`} inputMode="numeric" value={r.qty} placeholder="∞" onChange={(e) => setRow(r.id, { qty: e.target.value })} aria-label={t("d.pl.col.qty")} aria-invalid={!!fieldErr(r, "qty")} />
                 <input className={`input${fieldErr(r, "weight") ? " is-bad" : ""}`} inputMode="decimal" value={r.weight} onChange={(e) => setRow(r.id, { weight: e.target.value })} aria-label={t("d.pl.col.weight")} aria-invalid={!!fieldErr(r, "weight")} />
-                <label className="check"><input type="checkbox" checked={r.palletized} onChange={(e) => setRow(r.id, { palletized: e.target.checked })} aria-label={t("d.pl.col.pallet")} /></label>
-                <label className="check"><input type="checkbox" checked={r.upright} disabled={r.palletized} onChange={(e) => setRow(r.id, { upright: e.target.checked })} aria-label={t("d.pl.col.upright")} /></label>
+                <label className="check"><input type="checkbox" checked={r.shape !== "cyl" && r.palletized} disabled={r.shape === "cyl"} onChange={(e) => setRow(r.id, { palletized: e.target.checked })} aria-label={t("d.pl.col.pallet")} /></label>
+                <label className="check"><input type="checkbox" checked={r.shape !== "cyl" && r.upright} disabled={r.shape === "cyl" || r.palletized} onChange={(e) => setRow(r.id, { upright: e.target.checked })} aria-label={t("d.pl.col.upright")} /></label>
                 <span className="pl-act">
                   <button type="button" className="icon-btn icon-btn--plain" title={t("d.pl.dupRow")} aria-label={t("d.pl.dupRow")} onClick={() => dupRow(r.id)}><Icon name="copy" /></button>
                   <button type="button" className="icon-btn icon-btn--plain icon-btn--danger" title={t("d.pl.delRow")} aria-label={t("d.pl.delRow")} onClick={() => delRow(r.id)}><Icon name="trash" /></button>
                 </span>
               </div>
+              {r.shape === "cyl" && (
+                <div className="pl-cyl">
+                  <label><span>{t("d.pl.cyl.orient")}</span>
+                    <select className="select" value={r.orient || "any"} onChange={(e) => setRow(r.id, { orient: e.target.value })}>
+                      {ORIENT_KEYS.map((k) => <option key={k} value={k}>{t(`d.pl.orient.${k}`)}</option>)}
+                    </select>
+                  </label>
+                  <label className="check"><input type="checkbox" checked={r.stackable !== false} onChange={(e) => setRow(r.id, { stackable: e.target.checked })} />{t("d.pl.cyl.stack")}</label>
+                  <span className="muted">{t("d.pl.cylHint")}</span>
+                </div>
+              )}
               {errors[r.id] && <p className="pl-err">{[...new Set(Object.values(errors[r.id]))].map((k) => t(k)).join(" ")}</p>}
             </div>
           ))}

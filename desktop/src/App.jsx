@@ -3,7 +3,6 @@ import { AppProvider } from "./lib/app-context.jsx";
 import { useRoute } from "./lib/router.js";
 import { useLang } from "./lib/i18n.js";
 import { Sidebar } from "./components/Sidebar.jsx";
-import { Datalists } from "./components/form/Sections.jsx";
 import { Dashboard } from "./pages/Dashboard.jsx";
 import { Shipments } from "./pages/Shipments.jsx";
 import { NewShipment } from "./pages/NewShipment.jsx";
@@ -11,6 +10,8 @@ import { Editor } from "./pages/Editor.jsx";
 import { Letterheads } from "./pages/Letterheads.jsx";
 import { Settings } from "./pages/Settings.jsx";
 import { Planner } from "./pages/Planner.jsx";
+import { Companies } from "./pages/Companies.jsx";
+import { Banks } from "./pages/Banks.jsx";
 
 function Pages({ route }) {
   switch (route.name) {
@@ -18,6 +19,8 @@ function Pages({ route }) {
     case "new": return <NewShipment />;
     case "editor": return <Editor key={route.id} id={route.id} step={route.step} />;
     case "letterheads": return <Letterheads />;
+    case "companies": return <Companies />;
+    case "banks": return <Banks />;
     case "settings": return <Settings />;
     case "planner": return <Planner />;
     default: return <Dashboard />;
@@ -44,7 +47,6 @@ export default function App() {
         <Sidebar route={route} />
         <main className="main"><Pages route={route} /></main>
       </div>
-      <Datalists />
     </AppProvider>
   );
 }

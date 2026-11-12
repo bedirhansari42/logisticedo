@@ -110,3 +110,26 @@ test("parseGap accepts blank as 0 and decimals, rejects junk and negatives", () 
   assert.equal(parseGap("abc").ok, false);
   assert.equal(parseGap("-2").ok, false);
 });
+
+test("cylinder row: boy and çap required, h ignored; defaults stackable/tight/any", () => {
+  const r = parseItemRow(row({ shape: "cyl", l: "120", w: "80", h: "", orient: "any" }));
+  assert.equal(r.ok, true);
+  assert.deepEqual([r.item.shape, r.item.l, r.item.w, r.item.h, r.item.orient, r.item.stackable, r.item.tight], ["cyl", 120, 80, 80, "any", true, true]);
+  assert.deepEqual(errFields(parseItemRow(row({ shape: "cyl", l: "", w: "x" }))), ["l", "w"]);
+});
+
+test("cylinder row: orient and stackable are carried, staggering is always on; unknown orient becomes any", () => {
+  const r = parseItemRow(row({ shape: "cyl", orient: "lying", stackable: false, tight: false }));
+  assert.deepEqual([r.item.orient, r.item.stackable, r.item.tight, r.item.palletized], ["lying", false, true, false]);
+  assert.equal(parseItemRow(row({ shape: "cyl", orient: "weird" })).item.orient, "any");
+});
+
+test("old drafts without shape load as boxes", () => {
+  const rows = [{ id: "a", name: "x", l: "1", w: "2", h: "3", qty: "1", weight: "", palletized: false, upright: false }];
+  globalThis.localStorage = { getItem: () => JSON.stringify({ rows, gap: 0, container: "20" }), setItem() {} };
+  try {
+    const d = loadDraft();
+    assert.equal(d.rows[0].shape, "box");
+    assert.equal(parseItemRow(d.rows[0]).item.shape, undefined);
+  } finally { delete globalThis.localStorage; }
+});

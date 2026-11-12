@@ -20,9 +20,10 @@ function group(nodes) {
   return out;
 }
 
-function SchemaBody({ sec, ctx, extras = {} }) {
+function SchemaBody({ sec, ctx, extras = {}, only }) {
   const t = useT();
-  return group(sec.nodes).map((g, gi) => {
+  const nodes0 = only ? sec.nodes.filter((n) => only.includes(n.bind || n.labelKey)) : sec.nodes;
+  return group(nodes0).map((g, gi) => {
     const nodes = g.items.map((n, ni) => (
       n.kind === "sub"
         ? <div className="sub-head" key={ni}><span className="field-label">{t(n.labelKey)}</span>{n.hintKey && <span className="muted">{t(n.hintKey)}</span>}</div>
@@ -38,7 +39,7 @@ function SchemaBody({ sec, ctx, extras = {} }) {
   });
 }
 
-export function FormSection({ letter, ctx }) {
+export function FormSection({ letter, ctx, only, titleKey }) {
   const t = useT();
   const sec = SECTIONS[letter];
   if (!sec) return null;
@@ -48,24 +49,13 @@ export function FormSection({ letter, ctx }) {
   else if (letter === "O") body = <PalletsTable ctx={ctx} />;
   else {
     const extras = letter === "E" ? { "charges.vat": <ChargeTotals ctx={ctx} /> } : letter === "F" ? { "packing.totalVolume": <DistBlock ctx={ctx} /> } : {};
-    body = <SchemaBody sec={sec} ctx={ctx} extras={extras} />;
+    body = <SchemaBody sec={sec} ctx={ctx} extras={extras} only={only} />;
   }
   const count = letter === "D" && ctx.state.items.length ? ` · ${ctx.state.items.length}` : "";
   return (
     <section className="fcard" id={`sec-${letter}`}>
-      <header className="fcard-head"><h3>{t(sec.titleKey)}<span className="fsec-count">{count}</span></h3></header>
+      <header className="fcard-head"><h3 lang={titleKey ? "en" : undefined}>{t(titleKey || sec.titleKey)}<span className="fsec-count">{count}</span></h3></header>
       <div className="fsec-body">{body}</div>
     </section>
-  );
-}
-
-export function Datalists() {
-  return (
-    <>
-      <datalist id="dl-currency">{["USD", "EUR", "GBP", "TRY", "CNY", "RUB", "AED", "SAR", "CHF", "JPY"].map((c) => <option key={c} value={c} />)}</datalist>
-      <datalist id="dl-unit">{["PCS", "SET", "KG", "M", "M2", "M3", "L", "PAIR", "BOX", "CTN", "ROLL", "TON", "PKG", "DOZ", "BAG"].map((c) => <option key={c} value={c} />)}</datalist>
-      <datalist id="dl-pkg">{["CARTONS", "PALLETS", "BOXES", "CRATES", "BAGS", "BALES", "DRUMS", "ROLLS", "BUNDLES", "CASES", "PIECES"].map((c) => <option key={c} value={c} />)}</datalist>
-      <datalist id="dl-cov">{["ICC (A) - ALL RISKS", "ICC (B)", "ICC (C)", "OPEN COVER / ANNUAL POLICY"].map((c) => <option key={c} value={c} />)}</datalist>
-    </>
   );
 }

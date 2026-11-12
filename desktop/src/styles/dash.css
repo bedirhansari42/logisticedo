@@ -209,10 +209,15 @@ body { overflow: hidden; }
 .pl-head { padding: 0; }
 .pl-hint { font-size: 0.8125rem; }
 .pl-scroll { overflow-x: auto; display: grid; gap: 8px; padding-bottom: 4px; }
-.pl-grid { display: grid; grid-template-columns: minmax(150px, 1.6fr) repeat(3, minmax(88px, 0.8fr)) minmax(72px, 0.7fr) minmax(88px, 0.8fr) 84px 84px 76px; gap: 8px; align-items: center; min-width: 880px; }
+.pl-grid { display: grid; grid-template-columns: minmax(150px, 1.6fr) minmax(132px, 0.9fr) repeat(3, minmax(88px, 0.8fr)) minmax(72px, 0.7fr) minmax(88px, 0.8fr) 84px 84px 76px; gap: 8px; align-items: center; min-width: 1020px; }
 .pl-grid--head { font-size: 0.6875rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-4); }
 .pl-grid .check { justify-content: center; }
 .pl-grid .input { min-height: 38px; padding: 8px 10px; }
+.pl-grid .select { min-height: 38px; }
+.pl-cyl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin: 6px 0 2px; padding: 8px 12px; background: var(--surface-2, rgba(255,255,255,0.03)); border-radius: 6px; font-size: 0.8125rem; }
+.pl-cyl label:not(.check) { display: inline-flex; align-items: center; gap: 8px; }
+.pl-cyl .check { display: inline-flex; align-items: center; gap: 6px; }
+.pl-cyl .muted { flex-basis: 100%; font-size: 0.75rem; }
 .pl-grid .input.is-bad { border-color: var(--danger); background-color: var(--danger-tint); }
 .pl-act { display: flex; gap: 2px; justify-content: flex-end; }
 .pl-err { margin: 4px 0 0; font-size: 0.75rem; color: var(--danger); }
@@ -242,3 +247,27 @@ body { overflow: hidden; }
 .pl-legend li { display: inline-flex; align-items: center; gap: 8px; }
 .pl-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 .pl-gap .pl-err { text-transform: none; letter-spacing: 0; font-style: normal; }
+
+/* Hazır listeli alanlar (ListInput) tablo hücrelerinde: .items input ile aynı görünüm, ok işareti yok (dar sütunlar) */
+.items select { width: 100%; min-height: 34px; padding: 7px 6px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--text); font-size: 0.8125rem; line-height: 1.35; -webkit-appearance: none; appearance: none; text-overflow: ellipsis; cursor: pointer; }
+.items select:hover { border-color: var(--line); background: var(--surface); }
+.items select:focus { outline: none; border-color: var(--green); background: var(--surface-2); }
+.items select.is-auto { background: rgba(0, 130, 124, 0.1); }
+.items select option { background: var(--surface); color: var(--text); }
+
+/* Şirketler ve banka sayfaları */
+.side-group { margin: 16px 12px 4px; font-size: 0.6875rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-4); }
+.shell--compact .side-group { display: none; }
+.co-layout { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .co-layout { grid-template-columns: 1fr; } }
+.co-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.co-item { width: 100%; display: grid; gap: 2px; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: transparent; color: var(--text-2); cursor: pointer; }
+.co-item span { font-size: 0.75rem; color: var(--text-4); }
+.co-item:hover { background: var(--surface-2); }
+.co-item.is-on { border-color: var(--green); background: var(--green-tint); color: var(--text); }
+.co-form { display: grid; gap: 14px; }
+.co-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px; }
+.co-actions .btn--danger { margin-left: auto; }
+.bk-company { max-width: 360px; margin-bottom: 16px; }
+.bk-card { display: grid; gap: 10px; padding: 14px; margin-bottom: 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); }
+.bk-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

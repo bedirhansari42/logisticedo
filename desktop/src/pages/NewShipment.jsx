@@ -5,6 +5,7 @@ import { go } from "../lib/router.js";
 import { parseProforma } from "@engine/parse/index.js";
 import { newItem } from "@engine/doc-model.js";
 import { applyParsed, freshState, newShipmentRecord } from "../lib/shipment-state.js";
+import { applyCompanyToState, companyProfile, pickBank } from "../lib/company.js";
 import { Dropzone } from "../components/Dropzone.jsx";
 import { ParseReport, buildParseSummary } from "../components/ParseReport.jsx";
 import { Icon } from "../components/Icons.jsx";
@@ -14,12 +15,23 @@ export function NewShipment() {
   const app = useApp();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null); // { id, parse } | { error, name } | { reading }
-  const [lhId, setLhId] = useState(app.defaultLhId);
+  const [companyId, setCompanyId] = useState(app.lastCompanyId);
+  const company = app.getCompany(companyId);
+  const [lhId, setLhId] = useState(() => { const c = app.getCompany(app.lastCompanyId); return c?.lhId && app.getLetterhead(c.lhId) ? c.lhId : app.defaultLhId; });
   const lh = app.getLetterhead(lhId);
+  const onCompany = (value) => {
+    setCompanyId(value);
+    const c = app.getCompany(value);
+    if (c?.lhId && app.getLetterhead(c.lhId)) setLhId(c.lhId); // şirketin varsayılan anteti
+  };
   const prev = app.shipments[0]?.state || null;
 
   const create = async (state, auto, parse) => {
-    const rec = newShipmentRecord({ state, auto, lhId: lh ? lh.id : null, parse });
+    if (company) {
+      applyCompanyToState(state, company, pickBank(company, state.meta.currency)); // seçilen şirket satıcı, imza ve para birimine uyan hesabı yazar
+      app.setLastCompany(company.id);
+    }
+    const rec = newShipmentRecord({ state, auto, lhId: lh ? lh.id : null, parse, companyId: company ? company.id : null });
     rec.lang = getLang();
     await app.saveShipment(rec);
     return rec;
@@ -30,7 +42,7 @@ export function NewShipment() {
     setResult({ reading: file.name });
     try {
       const res = await parseProforma(file);
-      const { state, auto } = applyParsed(res, { prev, profile: lh?.profile });
+      const { state, auto } = applyParsed(res, { prev, profile: company ? companyProfile(company, "") : lh?.profile });
       const parse = buildParseSummary(file.name, res);
       const rec = await create(state, auto, parse);
       setResult({ id: rec.id, parse });
@@ -43,7 +55,7 @@ export function NewShipment() {
   };
 
   const blank = async () => {
-    const state = freshState({ prev, profile: lh?.profile });
+    const state = freshState({ prev, profile: company ? companyProfile(company, "") : lh?.profile });
     state.items.push(newItem());
     const rec = await create(state, new Set(), null);
     go(`/s/${rec.id}`);
@@ -56,6 +68,14 @@ export function NewShipment() {
       </header>
 
       <section className="card-block pad">
+        <div className="field">
+          <label htmlFor="newCo">{t("co.shipCompany")}</label>
+          <select id="newCo" className="select" value={company ? company.id : "none"} onChange={(e) => onCompany(e.target.value)}>
+            <option value="none">{t("co.noCompany")}</option>
+            {app.companies.map((c) => <option key={c.id} value={c.id}>{c.name || t("co.untitled")}</option>)}
+          </select>
+          {app.companies.length === 0 && <p className="muted">{t("co.empty").split(".")[0]}. <a className="link" href="#/companies">{t("d.nav.companies")}</a></p>}
+        </div>
         <div className="field">
           <label htmlFor="newLh">{t("d.new.letterhead")}</label>
           <select id="newLh" className="select" value={lhId} onChange={(e) => setLhId(e.target.value)}>

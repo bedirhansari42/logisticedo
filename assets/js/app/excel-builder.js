@@ -1,6 +1,6 @@
 /* Düzenlenebilir Excel çıktısı (ExcelJS): "Commercial Invoice" ve "Packing List" sayfaları, formüllü. */
 import { loadExcelJS } from "./loader.js";
-import { computeTotals, itemCurrency, itemVatRate, num, lineAmount, fmtDate, amountInWords, packagesInWords, round } from "./doc-model.js";
+import { computeTotals, itemCurrency, itemVatRate, num, lineAmount, fmtDate, amountInWords, itemPackageType, packagesText, packageTypeLabel, round } from "./doc-model.js";
 
 const FONT = "Arial";
 const GREY = "FFEEF1F2";
@@ -224,9 +224,8 @@ function invoiceSheet(wb, s) {
   }
 
   if (s.options.showWeightsOnInvoice) {
-    const type = s.packing.packageType || "PACKAGES";
     r = infoPairs(ws, r, [
-      ["TOTAL PACKAGES", T.packages ? `${T.packages} ${type}` : ""],
+      ["TOTAL PACKAGES", T.packages ? packagesText(s, T) : ""],
       ["NET WEIGHT (KG)", T.net ? round(T.net, 2) : ""],
       ["GROSS WEIGHT (KG)", T.gross ? round(T.gross, 2) : ""],
       ["VOLUME (M³)", T.volume ? round(T.volume, 3) : ""]
@@ -273,7 +272,7 @@ function packingSheet(wb, s) {
     put(ws, `D${r}`, num(it.qty) ?? "", { border: true, h: "right", numFmt: QTY });
     put(ws, `E${r}`, (it.unit || "").toUpperCase(), { border: true, h: "center" });
     put(ws, `F${r}`, num(it.packages) ?? "", { border: true, h: "right", numFmt: QTY });
-    put(ws, `G${r}`, (it.packageType || "").toUpperCase(), { border: true, h: "center" });
+    put(ws, `G${r}`, itemPackageType(it, s).toUpperCase(), { border: true, h: "center" });
     put(ws, `H${r}`, num(it.netWeight) ?? "", { border: true, h: "right", numFmt: KG });
     put(ws, `I${r}`, num(it.grossWeight) ?? "", { border: true, h: "right", numFmt: KG });
     put(ws, `J${r}`, it.dimensions || "", { border: true, h: "center" });
@@ -292,7 +291,7 @@ function packingSheet(wb, s) {
   put(ws, `D${r}`, T.qtyTotal != null ? { formula: `SUM(D${first}:D${last})`, result: T.qtyTotal } : "", { ...style, numFmt: QTY });
   put(ws, `E${r}`, T.qtyTotal != null ? T.qtyUnit : "", { ...style, h: "center" });
   put(ws, `F${r}`, sumOr("F", num(s.packing.totalPackages), T.itemPkgs), { ...style, numFmt: QTY });
-  put(ws, `G${r}`, s.packing.packageType || "", { ...style, h: "center" });
+  put(ws, `G${r}`, packageTypeLabel(s, T), { ...style, h: "center" });
   put(ws, `H${r}`, sumOr("H", num(s.packing.totalNet), T.itemNet), { ...style, numFmt: KG });
   put(ws, `I${r}`, sumOr("I", num(s.packing.totalGross), T.itemGross), { ...style, numFmt: KG });
   put(ws, `J${r}`, "", style);
@@ -300,7 +299,7 @@ function packingSheet(wb, s) {
   ws.getRow(r).height = 18;
   r += 2;
 
-  const pw = packagesInWords(T.packages, s.packing.packageType || "PACKAGES");
+  const pw = packagesText(s, T, { words: true });
   r = infoPairs(ws, r, [
     ["TOTAL PACKAGES", pw],
     ["NET WEIGHT (KG)", T.net ? round(T.net, 2) : ""],

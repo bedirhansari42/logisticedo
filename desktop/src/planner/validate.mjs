@@ -27,20 +27,28 @@ export function validatePlan(container, placements, opts = {}) {
     for (let j = i + 1; j < P.length; j++) {
       const a = P[i], b = P[j];
       if (!crosses(a.z, a.z + a.dz, b.z, b.z + b.dz)) continue; // dikey temas serbest
-      if (crosses(a.x, a.x + a.dx, b.x, b.x + b.dx, gap) && crosses(a.y, a.y + a.dy, b.y, b.y + b.dy, gap)) {
-        errors.push(`${name(a)} overlaps ${name(b)}`);
-      }
+      const hit = a.circ && b.circ
+        ? Math.hypot(a.x + a.dx / 2 - (b.x + b.dx / 2), a.y + a.dy / 2 - (b.y + b.dy / 2)) < (a.dx + b.dx) / 2 + gap - EPS
+        : crosses(a.x, a.x + a.dx, b.x, b.x + b.dx, gap) && crosses(a.y, a.y + a.dy, b.y, b.y + b.dy, gap);
+      if (hit) errors.push(`${name(a)} overlaps ${name(b)}`);
     }
   }
 
-  const supportersOf = (q) => P.filter((s) => s !== q && Math.abs(s.z + s.dz - q.z) < EPS && crosses(s.x, s.x + s.dx, q.x, q.x + q.dx) && crosses(s.y, s.y + s.dy, q.y, q.y + q.dy));
+  const sameFoot = (a, b) => Math.abs(a.x - b.x) < EPS && Math.abs(a.y - b.y) < EPS && Math.abs(a.dx - b.dx) < EPS && Math.abs(a.dy - b.dy) < EPS;
+  // q'nun altında, tabanı q'nunkiyle kesişen ve üst yüzü q'nun tabanına değen her şey
+  const touching = (q) => P.filter((s) => s !== q && Math.abs(s.z + s.dz - q.z) < EPS && crosses(s.x, s.x + s.dx, q.x, q.x + q.dx) && crosses(s.y, s.y + s.dy, q.y, q.y + q.dy));
+  // gerçekten taşıyanlar: silindir yalnızca aynı ayak izli silindirce taşınır; düz kutu her şeye destek olur, silindir kutuya destek olmaz
+  const supportersOf = (q) => touching(q).filter((s) => (s.cyl ? !!q.cyl && sameFoot(q, s) : true));
 
   for (const q of P) {
-    for (const s of supportersOf(q)) {
-      if (s.pallet) errors.push(`${name(q)} on top of pallet ${name(s)}`);
+    for (const s of touching(q)) {
+      if (s.cyl) {
+        if (!q.cyl) errors.push(`${name(q)} on top of cylinder ${name(s)}`);
+        else if (s.pallet && sameFoot(q, s)) errors.push(`${name(q)} on top of non-stackable ${name(s)}`);
+      } else if (s.pallet) errors.push(`${name(q)} on top of pallet ${name(s)}`);
     }
     if (q.z < EPS) continue;
-    const area = supportersOf(q).reduce((sum, s) => sum + overlapLen(q.x, q.x + q.dx, s.x, s.x + s.dx) * overlapLen(q.y, q.y + q.dy, s.y, s.y + s.dy), 0);
+    const area = supportersOf(q).reduce((sum, s) => sum + (s.cyl ? q.dx * q.dy : overlapLen(q.x, q.x + q.dx, s.x, s.x + s.dx) * overlapLen(q.y, q.y + q.dy, s.y, s.y + s.dy)), 0);
     if (area < q.dx * q.dy - 1e-4) errors.push(`${name(q)} lacks full support`);
   }
 

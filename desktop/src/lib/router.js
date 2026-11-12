@@ -1,4 +1,4 @@
-/* Küçük hash yönlendirici: #/  #/shipments  #/new  #/s/:id/:step  #/letterheads  #/planner  #/settings */
+/* Küçük hash yönlendirici: #/  #/shipments  #/new  #/s/:id/:step  #/letterheads  #/companies  #/banks  #/planner  #/settings */
 import { useEffect, useState } from "react";
 
 export function parseHash(hash) {
@@ -8,6 +8,8 @@ export function parseHash(hash) {
   if (a === "shipments") return { name: "shipments" };
   if (a === "new") return { name: "new" };
   if (a === "letterheads") return { name: "letterheads" };
+  if (a === "companies") return { name: "companies" };
+  if (a === "banks") return { name: "banks" };
   if (a === "settings") return { name: "settings" };
   if (a === "planner") return { name: "planner" };
   if (a === "s" && b) return { name: "editor", id: b, step: c || "general" };

@@ -13,6 +13,8 @@ export function AppProvider({ children }) {
   const [letterheads, setLetterheads] = useState([]);
   const [defaultLhId, setDefaultLhId] = useState("none");
   const [shipments, setShipments] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [lastCompanyId, setLastCompanyId] = useState("none");
 
   useEffect(() => {
     let alive = true;
@@ -21,11 +23,15 @@ export function AppProvider({ children }) {
       const lhs = await store.listLetterheads();
       const id = await store.kvGet("lhId");
       const ships = await store.listShipments();
+      const cos = (await store.kvGet("companies")) || [];
+      const coId = await store.kvGet("companyId");
       if (!alive) return;
       setPersistent(ok);
       setLetterheads(lhs);
       if (id && lhs.some((l) => l.id === id)) setDefaultLhId(id);
       setShipments(ships);
+      setCompanies(Array.isArray(cos) ? cos : []);
+      if (coId && Array.isArray(cos) && cos.some((c) => c.id === coId)) setLastCompanyId(coId);
       setReady(true);
       store.requestPersistence();
     })();
@@ -46,6 +52,24 @@ export function AppProvider({ children }) {
     setDefaultLhId((cur) => { if (cur === id) { store.kvSet("lhId", "none"); return "none"; } return cur; });
   }, []);
 
+  const saveCompanies = useCallback(async (list) => {
+    setCompanies(list);
+    await store.kvSet("companies", list);
+  }, []);
+
+  const saveCompany = useCallback(async (rec) => {
+    const next = { ...rec, updatedAt: Date.now() };
+    await saveCompanies([...companies.filter((c) => c.id !== rec.id), next].sort((a, b) => a.name.localeCompare(b.name)));
+    return next;
+  }, [companies, saveCompanies]);
+
+  const deleteCompany = useCallback(async (id) => {
+    await saveCompanies(companies.filter((c) => c.id !== id));
+    setLastCompanyId((cur) => { if (cur === id) { store.kvSet("companyId", "none"); return "none"; } return cur; });
+  }, [companies, saveCompanies]);
+
+  const setLastCompany = useCallback((id) => { setLastCompanyId(id); store.kvSet("companyId", id); }, []);
+
   const saveShipment = useCallback(async (rec) => {
     const ok = await store.saveShipment(rec);
     setShipments((list) => [rec, ...list.filter((s) => s.id !== rec.id)].sort(byUpdated));
@@ -60,8 +84,10 @@ export function AppProvider({ children }) {
   const value = useMemo(() => ({
     ready, persistent, letterheads, defaultLhId, setDefaultLh, saveLetterhead, deleteLetterhead,
     shipments, saveShipment, deleteShipment,
+    companies, lastCompanyId, setLastCompany, saveCompany, deleteCompany,
+    getCompany: (id) => companies.find((c) => c.id === id) || null,
     getLetterhead: (id) => letterheads.find((l) => l.id === id) || null
-  }), [ready, persistent, letterheads, defaultLhId, shipments, setDefaultLh, saveLetterhead, deleteLetterhead, saveShipment, deleteShipment]);
+  }), [ready, persistent, letterheads, defaultLhId, shipments, companies, lastCompanyId, setDefaultLh, saveLetterhead, deleteLetterhead, saveShipment, deleteShipment, setLastCompany, saveCompany, deleteCompany]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

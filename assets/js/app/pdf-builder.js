@@ -3,7 +3,7 @@
 import { loadPdfLib, loadDocFonts } from "./loader.js";
 import {
   computeTotals, itemCurrency, itemVatRate, num, lineAmount, fmtMoney, fmtPrice, fmtQty, fmtWeight, fmtVolume, fmtDate,
-  amountInWords, packagesInWords, DEFAULT_ORIGIN_STATEMENT, DEFAULT_ORIGIN_STATEMENT_MIXED, itemOrigin, originList, palletVolume
+  amountInWords, packagesInWords, itemPackageType, packagesText, DEFAULT_ORIGIN_STATEMENT, DEFAULT_ORIGIN_STATEMENT_MIXED, itemOrigin, originList, palletVolume
 } from "./doc-model.js";
 
 const MM = 72 / 25.4;
@@ -519,8 +519,7 @@ function partiesRows(doc, s) {
 
 function weightPairs(T, s) {
   const pairs = [];
-  const type = s.packing.packageType || "PACKAGES";
-  if (T.packages) pairs.push(["Packages", `${fmtQty(T.packages)} ${type}`]);
+  if (T.packages) pairs.push(["Packages", packagesText(s, T)]);
   if (T.net) pairs.push(["Net Weight", `${fmtWeight(T.net)} KG`]);
   if (T.gross) pairs.push(["Gross Weight", `${fmtWeight(T.gross)} KG`]);
   if (T.volume) pairs.push(["Volume", `${fmtVolume(T.volume)} M³`]);
@@ -679,7 +678,7 @@ function renderPacking(ctx, s) {
     { key: "qty", title: "Qty", align: "right", min: 28, max: 56 },
     { key: "unit", title: "Unit", align: "center", min: 24, max: 38 },
     { key: "pkgs", title: "Pkgs", align: "right", min: 26, max: 44 },
-    ...(any("packageType") ? [{ key: "ptype", title: "Pkg Type", align: "center", min: 36, max: 60 }] : []),
+    ...(s.items.some((it) => itemPackageType(it, s)) ? [{ key: "ptype", title: "Pkg Type", align: "center", min: 36, max: 60 }] : []),
     { key: "net", title: "Net Wt. (kg)", align: "right", min: 40, max: 64 },
     { key: "gross", title: "Gross Wt. (kg)", align: "right", min: 42, max: 64 },
     ...(any("dimensions") ? [{ key: "dims", title: "Dimensions (cm)", align: "center", min: 48, max: 82 }] : []),
@@ -689,7 +688,7 @@ function renderPacking(ctx, s) {
     cells: {
       no: String(i + 1), desc: it.description, hs: it.hsCode,
       qty: fmtQty(num(it.qty)), unit: (it.unit || "").toUpperCase(),
-      pkgs: fmtQty(num(it.packages)), ptype: (it.packageType || "").toUpperCase(),
+      pkgs: fmtQty(num(it.packages)), ptype: itemPackageType(it, s).toUpperCase(),
       net: fmtWeight(num(it.netWeight)), gross: fmtWeight(num(it.grossWeight)),
       dims: it.dimensions, vol: fmtVolume(num(it.volume))
     }
@@ -707,9 +706,8 @@ function renderPacking(ctx, s) {
 
   /* Özet + marka/numara */
   d.gap(8);
-  const type = s.packing.packageType || "PACKAGES";
   const sum = [];
-  const pw = packagesInWords(T.packages, type);
+  const pw = packagesText(s, T, { words: true });
   if (pw) sum.push(["Total Packages", pw]);
   if (T.net) sum.push(["Net Weight", `${fmtWeight(T.net)} KG`]);
   if (T.gross) sum.push(["Gross Weight", `${fmtWeight(T.gross)} KG`]);
@@ -791,8 +789,7 @@ function renderTransport(ctx, s, kind) {
   ]);
   d.gap(9);
 
-  const type = s.packing.packageType || "PACKAGES";
-  const pkgWords = packagesInWords(T.packages, type);
+  const pkgWords = packagesText(s, T, { words: true });
   const cols = [
     { key: "marks", title: "Marks & Numbers", min: 60, max: 110 },
     { key: "pk", title: "No. & Kind of Packages", min: 70, max: 120 },
@@ -803,7 +800,7 @@ function renderTransport(ctx, s, kind) {
   const rows = [{
     cells: {
       marks: s.packing.marks || "AS ADDRESSED",
-      pk: pkgWords || (T.packages ? `${fmtQty(T.packages)} ${type}` : ""),
+      pk: pkgWords || packagesText(s, T),
       desc: cargoDescription(s),
       gw: T.gross ? fmtWeight(T.gross) : "",
       m3: T.volume ? fmtVolume(T.volume) : ""
@@ -963,7 +960,7 @@ function renderInstruction(ctx, s, kind) {
   const rows = s.items.map((it, i) => ({
     cells: {
       no: String(i + 1), desc: it.description, hs: it.hsCode, qty: fmtQty(num(it.qty)), unit: (it.unit || "").toUpperCase(),
-      pkgs: [fmtQty(num(it.packages)), (it.packageType || "").toUpperCase()].filter(Boolean).join(" "),
+      pkgs: [fmtQty(num(it.packages)), itemPackageType(it, s).toUpperCase()].filter(Boolean).join(" "),
       gross: fmtWeight(num(it.grossWeight)), vol: fmtVolume(num(it.volume)), val: fmtMoney(lineAmount(it)), origin: itemOrigin(it, s)
     }
   }));
@@ -999,7 +996,7 @@ function cargoRows(s, T, { pkgs = true, vol = false } = {}) {
   const rows = s.items.map((it, i) => ({
     cells: {
       no: String(i + 1), desc: it.description, hs: it.hsCode, qty: fmtQty(num(it.qty)), unit: (it.unit || "").toUpperCase(),
-      pkgs: [fmtQty(num(it.packages)), (it.packageType || "").toUpperCase()].filter(Boolean).join(" "),
+      pkgs: [fmtQty(num(it.packages)), itemPackageType(it, s).toUpperCase()].filter(Boolean).join(" "),
       gross: fmtWeight(num(it.grossWeight)), vol: fmtVolume(num(it.volume))
     }
   }));
@@ -1237,7 +1234,6 @@ function renderCmr(ctx, s) {
   ], [0.5, 0.5]);
   d.gap(8);
 
-  const type = (c.packing || s.packing.packageType || "").toUpperCase();
   const hsAny = s.items.some((it) => it.hsCode);
   const cols = [
     { key: "marks", title: "6  Marks and Nos", min: 56, max: 100 },
@@ -1250,7 +1246,7 @@ function renderCmr(ctx, s) {
   ];
   const rows = s.items.map((it, i) => ({
     cells: {
-      marks: i === 0 ? (s.packing.marks || "") : "", pk: fmtQty(num(it.packages)), pack: (it.packageType || type || "").toUpperCase(),
+      marks: i === 0 ? (s.packing.marks || "") : "", pk: fmtQty(num(it.packages)), pack: itemPackageType(it, s).toUpperCase(),
       desc: it.description, hs: it.hsCode, gw: fmtWeight(num(it.grossWeight)), m3: fmtVolume(num(it.volume))
     }
   }));

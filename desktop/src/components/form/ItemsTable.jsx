@@ -6,6 +6,7 @@ import { newItem, toInput, uiDec, lineAmount, isAmountComputed, fmtUi, distribut
 import { AutoArea, NUM_FILTER } from "./Field.jsx";
 import { ItemTotals } from "./Totals.jsx";
 import { Icon } from "../Icons.jsx";
+import { ListInput } from "./ListInput.jsx";
 
 const NUMERIC = new Set(["qty", "unitPrice", "vatRate", "amount", "packages", "netWeight", "grossWeight", "volume"]);
 
@@ -14,7 +15,7 @@ const COLS = {
     ["code", "it.code", "text", "w-code"],
     ["description", "it.desc", "area", "w-desc"],
     ["hsCode", "it.hs", "text", "w-hs"],
-    ["origin", "it.origin", "text", "w-origin"],
+    ["origin", "it.origin", "text", "w-origin", "dl-country"],
     ["qty", "it.qty", "num", "w-num"],
     ["unit", "it.unit", "text", "w-unit", "dl-unit"],
     ["unitPrice", "it.price", "num", "w-num"],
@@ -63,7 +64,7 @@ export function ItemsTable({ ctx }) {
     if ((f === "qty" || f === "unitPrice") && isAmountComputed(it)) it.amount = toInput(lineAmount(it), uiDec(), 2);
   });
 
-  const add = () => { focusLast.current = true; update((d) => { const last = d.items[d.items.length - 1]; d.items.push(newItem({ unit: last?.unit || "PCS", packageType: last?.packageType || "" })); }); };
+  const add = () => { focusLast.current = true; update((d) => { const last = d.items[d.items.length - 1]; d.items.push(newItem({ unit: last?.unit || "PCS" })); }); };
   const remove = (id) => update((d) => { d.items = d.items.filter((x) => x.id !== id); });
   const dup = (id) => update((d) => { const i = d.items.findIndex((x) => x.id === id); if (i < 0) return; const { id: _drop, ...copy } = d.items[i]; d.items.splice(i + 1, 0, newItem(copy)); });
 
@@ -129,9 +130,9 @@ export function ItemsTable({ ctx }) {
                     cell = <input className="num" readOnly tabIndex={-1} value={fmtUi(lineAmount(it))} aria-label={aria} />;
                   } else {
                     const numeric = type === "num" || type === "amount";
-                    const placeholder = field === "currency" ? cur : field === "origin" ? state.shipment.countryOrigin : field === "vatRate" ? state.charges.vatRate || "0" : undefined;
+                    const placeholder = field === "currency" ? cur : field === "origin" ? state.shipment.countryOrigin : field === "vatRate" ? state.charges.vatRate || "0" : field === "packageType" ? state.packing.packageType : undefined;
                     cell = (
-                      <input
+                      <ListInput
                         type="text" value={it[field] ?? ""} list={list} inputMode={numeric ? "decimal" : undefined} placeholder={placeholder}
                         className={`${numeric ? "num" : ""}${field === "currency" ? " cur" : ""}${isAuto ? " is-auto" : ""}`.trim()}
                         onChange={(e) => onItem(it.id, field, e.target.value)} {...common}

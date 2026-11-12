@@ -15,7 +15,9 @@ function groupPaths(placements, colorOf) {
   for (const p of [...placements].sort((a, b) => a.z - b.z || a.seq - b.seq)) {
     const key = `${p.itemId}|${p.z}`;
     if (!groups.has(key)) groups.set(key, { color: colorOf(p.itemId), d: "" });
-    groups.get(key).d += `M${p.x} ${p.y}h${p.dx}v${p.dy}h${-p.dx}z`;
+    groups.get(key).d += p.kind === "up"
+      ? `M${p.x} ${p.y + p.dy / 2}a${p.dx / 2} ${p.dy / 2} 0 1 0 ${p.dx} 0a${p.dx / 2} ${p.dy / 2} 0 1 0 ${-p.dx} 0z` // dik silindir: tepeden daire
+      : `M${p.x} ${p.y}h${p.dx}v${p.dy}h${-p.dx}z`;
   }
   return [...groups.values()];
 }
@@ -86,10 +88,34 @@ export function IsoView({ container, placements, colorOf, doorLabel = "DOOR" }) 
     poly([[0, 0, 0], [0, W, 0], [0, W, H], [0, 0, H]], "rgba(255,255,255,0.04)", "rgba(255,255,255,0.14)");
     poly([[0, 0, 0], [L, 0, 0], [L, 0, H], [0, 0, H]], "rgba(255,255,255,0.03)", "rgba(255,255,255,0.14)");
 
+    // silindir: çokgenle yaklaşık çizilir; yalnızca izleyiciye bakan yüzler boyanır (dışbükey cisimde sıralama gerekmez)
+    const N = 28;
+    const drawCyl = (p, base) => {
+      const { x, y, z, dx, dy, dz } = p;
+      const ring = (a, cx, cy, cz, ra, rb, axis) => (axis === "z" ? [cx + ra * Math.cos(a), cy + rb * Math.sin(a), cz] : axis === "x" ? [cx, cy + ra * Math.cos(a), cz + rb * Math.sin(a)] : [cx + ra * Math.cos(a), cy, cz + rb * Math.sin(a)]);
+      const axis = p.kind === "up" ? "z" : p.kind === "lx" ? "x" : "y";
+      const len = axis === "z" ? dz : axis === "x" ? dx : dy;
+      const R1 = axis === "z" ? dx / 2 : axis === "x" ? dy / 2 : dx / 2, R2 = axis === "z" ? dy / 2 : dz / 2;
+      const c = [x + dx / 2, y + dy / 2, z + dz / 2];
+      const start = axis === "z" ? z : axis === "x" ? x : y;
+      const at = (a, t) => ring(a, c[0], c[1], c[2], R1, R2, axis).map((v, i) => ((axis === "z" && i === 2) || (axis === "x" && i === 0) || (axis === "y" && i === 1) ? start + t : v));
+      const view = [1, 1, 1];
+      for (let i = 0; i < N; i++) {
+        const a0 = (i / N) * Math.PI * 2, a1 = ((i + 1) / N) * Math.PI * 2, am = (a0 + a1) / 2;
+        const n = ring(am, 0, 0, 0, 1, 1, axis); // yüzey normali (çapraz kesit düzleminde)
+        const facing = n[0] * view[0] + n[1] * view[1] + n[2] * view[2];
+        if (facing <= 0) continue;
+        poly([at(a0, 0), at(a1, 0), at(a1, len), at(a0, len)], shade(base, 0.62 + 0.42 * (facing / Math.sqrt(3))), "rgba(0,0,0,0.18)");
+      }
+      const cap = (t) => poly(Array.from({ length: N }, (_, i) => at((i / N) * Math.PI * 2, t)), shade(base, 1.15), "rgba(0,0,0,0.35)");
+      cap(len); // görünen uç: z için üst, x ve y için kapıya / yana bakan uç
+    };
+
     const order = [...placements].sort((a, b) => (a.x + a.y + a.z) - (b.x + b.y + b.z) || a.seq - b.seq);
     for (const p of order) {
       const base = colorOf(p.itemId);
       const { x, y, z, dx, dy, dz } = p;
+      if (p.cyl) { drawCyl(p, base); continue; }
       poly([[x, y, z + dz], [x + dx, y, z + dz], [x + dx, y + dy, z + dz], [x, y + dy, z + dz]], shade(base, 1.18), "rgba(0,0,0,0.35)");
       poly([[x + dx, y, z], [x + dx, y + dy, z], [x + dx, y + dy, z + dz], [x + dx, y, z + dz]], shade(base, 0.95), "rgba(0,0,0,0.35)");
       poly([[x, y + dy, z], [x + dx, y + dy, z], [x + dx, y + dy, z + dz], [x, y + dy, z + dz]], shade(base, 0.7), "rgba(0,0,0,0.35)");

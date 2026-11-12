@@ -83,7 +83,9 @@ export async function buildPlanPdf(result, items, deps) {
     page.drawRectangle({ x: left, y: PH - y - h, width: w, height: h, color: rgb(0.96, 0.97, 0.97), borderColor: rgb(0.35, 0.37, 0.38), borderWidth: 0.8 });
     const sorted = [...placements].sort((a, b) => a.z - b.z || a.seq - b.seq);
     for (const p of sorted) {
-      page.drawRectangle({ x: left + p.x * s, y: PH - y - (p.y + p.dy) * s, width: p.dx * s, height: p.dy * s, color: rgb(...hex(colorOf(p.itemId))), opacity: 0.92, borderColor: rgb(0.12, 0.13, 0.14), borderWidth: 0.25 });
+      const style = { color: rgb(...hex(colorOf(p.itemId))), opacity: 0.92, borderColor: rgb(0.12, 0.13, 0.14), borderWidth: 0.25 };
+      if (p.kind === "up") page.drawEllipse({ x: left + (p.x + p.dx / 2) * s, y: PH - y - (p.y + p.dy / 2) * s, xScale: (p.dx / 2) * s, yScale: (p.dy / 2) * s, ...style });
+      else page.drawRectangle({ x: left + p.x * s, y: PH - y - (p.y + p.dy) * s, width: p.dx * s, height: p.dy * s, ...style });
     }
     if (labels && sorted.length) {
       const minZ = sorted[0].z;
@@ -128,10 +130,13 @@ export async function buildPlanPdf(result, items, deps) {
   const rows = items.map((it) => {
     const placed = result.containers.reduce((s, c) => s + c.placements.filter((p) => p.itemId === it.id).length, 0);
     const un = result.unplaced.filter((u) => u.itemId === it.id).reduce((s, u) => s + u.count, 0);
-    return [it.name, `${num(it.l)} × ${num(it.w)} × ${num(it.h)}`, it.qty === null ? "max" : it.qty, it.palletized ? "yes" : "no", placed, un || ""];
+    const cyl = it.shape === "cyl";
+    const dims = cyl ? `Ø ${num(it.w)} × L ${num(it.l)}` : `${num(it.l)} × ${num(it.w)} × ${num(it.h)}`;
+    const type = cyl ? `cylinder, ${it.orient === "up" ? "upright" : it.orient === "lying" ? "lying" : "any direction"}${it.stackable === false ? ", no stacking" : ""}` : it.palletized ? "pallet" : "box";
+    return [it.name, dims, it.qty === null ? "max" : it.qty, type, placed, un || ""];
   });
   table([
-    { h: "Item", w: 175 }, { h: "L × W × H (cm)", w: 120 }, { h: "Qty", w: 50, right: true }, { h: "Pallet", w: 50 }, { h: "Placed", w: 60, right: true }, { h: "Not placed", w: 60, right: true }
+    { h: "Item", w: 130 }, { h: "L × W × H (cm)", w: 110 }, { h: "Qty", w: 40, right: true }, { h: "Type", w: 130 }, { h: "Placed", w: 50, right: true }, { h: "Not placed", w: 55, right: true }
   ], rows);
   y += 10;
   if (result.fill) { ensure(14); text(`As many as fit: ${result.fill.count} × ${items.find((i) => i.id === result.fill.itemId)?.name ?? ""}`, M, 9, B); y += 14; }
@@ -175,10 +180,10 @@ export async function buildPlanPdf(result, items, deps) {
     y += 6;
     heading("Load sequence", 10);
     const seq = [...c.placements].sort((a, b) => a.seq - b.seq).map((p) => [
-      p.seq, nameOf(p.itemId), `${num(p.x)} / ${num(p.y)} / ${num(p.z)}`, `${num(p.dx)} × ${num(p.dy)} × ${num(p.dz)}`, p.pallet ? "pallet" : ""
+      p.seq, nameOf(p.itemId), `${num(p.x)} / ${num(p.y)} / ${num(p.z)}`, `${num(p.dx)} × ${num(p.dy)} × ${num(p.dz)}`, p.cyl ? (p.kind === "up" ? "upright" : "lying") : p.pallet ? "pallet" : ""
     ]);
     table([
-      { h: "#", w: 36, right: true }, { h: "Item", w: 200 }, { h: "Position x / y / z (cm)", w: 130 }, { h: "Size (cm)", w: 110 }, { h: "", w: 39 }
+      { h: "#", w: 36, right: true }, { h: "Item", w: 180 }, { h: "Position x / y / z (cm)", w: 130 }, { h: "Size (cm)", w: 110 }, { h: "", w: 59 }
     ], seq, 11, 7.4);
   });
 

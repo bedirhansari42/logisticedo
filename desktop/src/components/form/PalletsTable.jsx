@@ -4,6 +4,7 @@ import { useT } from "../../lib/i18n.js";
 import { newPallet, palletsFromItems } from "@engine/doc-model.js";
 import { AutoArea, NUM_FILTER } from "./Field.jsx";
 import { Icon } from "../Icons.jsx";
+import { ListInput } from "./ListInput.jsx";
 
 const COLS = [
   ["no", "pal.no", "text", "w-pno"],
@@ -66,7 +67,7 @@ export function PalletsTable({ ctx }) {
                   <td key={f} className={cls}>
                     {type === "area"
                       ? <AutoArea value={p[f] ?? ""} onChange={(e) => onPal(p.id, f, e.target.value)} aria-label={`${t(key)} ${i + 1}`} />
-                      : <input type="text" value={p[f] ?? ""} list={list} className={type === "num" ? "num" : undefined} inputMode={type === "num" ? "decimal" : undefined} placeholder={f === "no" ? String(i + 1) : undefined} onChange={(e) => onPal(p.id, f, e.target.value)} aria-label={`${t(key)} ${i + 1}`} />}
+                      : <ListInput type="text" value={p[f] ?? ""} list={list} className={type === "num" ? "num" : undefined} inputMode={type === "num" ? "decimal" : undefined} placeholder={f === "no" ? String(i + 1) : undefined} onChange={(e) => onPal(p.id, f, e.target.value)} aria-label={`${t(key)} ${i + 1}`} />}
                   </td>
                 ))}
                 <td className="it-act">

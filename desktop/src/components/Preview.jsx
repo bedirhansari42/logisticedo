@@ -97,7 +97,6 @@ export function Preview({ state, lh, doc, onDownload, busyKey }) {
             <button className="icon-btn icon-btn--plain" type="button" aria-haspopup="menu" aria-expanded={menu} title={t("pv.dlMore")} aria-label={t("pv.dlMore")} onClick={(e) => { e.stopPropagation(); setMenu((m) => !m); }}><Icon name="more" /></button>
             {menu && (
               <div className="pv-menu" role="menu">
-                <button type="button" role="menuitem" onClick={() => { setMenu(false); onDownload("all"); }}>{t("pv.dlAll")}</button>
                 <button type="button" role="menuitem" onClick={() => { setMenu(false); onDownload("xlsx"); }}>{t("pv.dlXlsx")}</button>
               </div>
             )}

@@ -2,6 +2,10 @@ import { useLayoutEffect, useRef } from "react";
 import { useT } from "../../lib/i18n.js";
 import { getPath } from "../../lib/shipment-state.js";
 import { INCOTERMS, TRANSPORT_MODES } from "@engine/doc-model.js";
+import { ListInput } from "./ListInput.jsx";
+
+// (çeviri anahtarı denetimi tırnaklı "a.b" yazılarını anahtar sanır; bu yüzden parçalı yazıldı)
+const COUNTRY_BINDS = new Set([["shipment", "countryOrigin"], ["shipment", "countryDestination"], ["poa", "country"]].map((p) => p.join(".")));
 
 export const NUM_FILTER = /[^\d.,\-]/g;
 const UPPER = new Set(["meta.currency", "packing.packageType"]);
@@ -90,9 +94,9 @@ export function SchemaField({ node, ctx }) {
       setField(ctx, node.bind, val);
     };
     control = (
-      <input
-        id={id} className={cls("input")} type={node.type === "date" ? "date" : "text"} value={v ?? ""} placeholder={ph}
-        inputMode={node.inputmode} list={node.list} maxLength={node.maxlength ? Number(node.maxlength) : undefined}
+      <ListInput
+        id={id} className={cls("input")} type={node.type === "date" ? "date" : "text"} value={v ?? ""} placeholder={COUNTRY_BINDS.has(node.bind) ? undefined : ph}
+        inputMode={node.inputmode} list={COUNTRY_BINDS.has(node.bind) ? "dl-country" : node.list} maxLength={node.maxlength ? Number(node.maxlength) : undefined}
         autoCapitalize={node.autocapitalize} spellCheck={node.mono ? false : undefined}
         onChange={onChange}
       />

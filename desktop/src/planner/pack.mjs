@@ -10,14 +10,34 @@ const BUCKET = 20; // cm; kutular başlangıç (x, y) hücresine göre ızgaraya
 const crosses = (a0, a1, b0, b1, pad = 0) => a0 < b1 + pad - EPS && b0 < a1 + pad - EPS;
 const overlapLen = (a0, a1, b0, b1) => Math.max(0, Math.min(a1, b1) - Math.max(a0, b0));
 
+const isCyl = (it) => it.shape === "cyl";
+/** Yalnızca zemine konan ve üstüne hiçbir şey konmayan kalem: paletli yük ya da istiflenemez silindir */
+export const floorOnly = (it) => !!it.palletized || (isCyl(it) && it.stackable === false);
+
+/** Silindirin yönü: "up" = dik (tepeden daire), "lx"/"ly" = yatık (ekseni x ya da y boyunca) */
+export function cylKind(item, dx, dy, dz) {
+  const d = item.w;
+  if (Math.abs(dx - d) < EPS && Math.abs(dy - d) < EPS) return "up";
+  return Math.abs(dy - d) < EPS && Math.abs(dz - d) < EPS ? "lx" : "ly";
+}
+
 export function orientationsOf(item) {
   const { l, w, h } = item;
+  if (isCyl(item)) {
+    const d = w, len = l; // l = boy, w = çap
+    const up = [[d, d, len]], lying = [[len, d, d], [d, len, d]];
+    const o = item.orient === "up" ? up : item.orient === "lying" ? lying : [...up, ...lying];
+    const seen = new Set();
+    return o.filter((v) => { const k = v.join("x"); if (seen.has(k)) return false; seen.add(k); return true; });
+  }
   const list = item.palletized || item.upright
     ? [[l, w, h], [w, l, h]]
     : [[l, w, h], [l, h, w], [w, l, h], [w, h, l], [h, l, w], [h, w, l]];
   const seen = new Set();
   return list.filter((o) => { const k = o.join("x"); if (seen.has(k)) return false; seen.add(k); return true; });
 }
+
+const sameFoot = (e, x, y, dx, dy) => Math.abs(e.x - x) < EPS && Math.abs(e.y - y) < EPS && Math.abs(e.dx - dx) < EPS && Math.abs(e.dy - dy) < EPS;
 
 const fitsEmpty = (orients, C) => orients.some(([dx, dy, dz]) => dx <= C.L + EPS && dy <= C.W + EPS && dz <= C.H + EPS);
 
@@ -37,7 +57,7 @@ class Bin {
     this.weight = 0;
   }
 
-  fits(px, py, pz, dx, dy, dz, pallet) {
+  fits(px, py, pz, dx, dy, dz, pallet, circ = false, cyl = false) {
     const { C, gap } = this;
     if (px + dx > C.L + EPS || py + dy > C.W + EPS || pz + dz > C.H + EPS) return false;
     if (pallet && pz > EPS) return false;
@@ -51,10 +71,17 @@ class Bin {
         this.budget.work += cell.length + 1;
         for (let k = 0; k < cell.length; k++) {
           const e = cell[k];
-          const xy = crosses(px, px + dx, e.x, e.x + e.dx, gap) && crosses(py, py + dy, e.y, e.y + e.dy, gap);
+          const xy = circ && e.circ
+            ? Math.hypot(px + dx / 2 - (e.x + e.dx / 2), py + dy / 2 - (e.y + e.dy / 2)) < (dx + e.dx) / 2 + gap - EPS
+            : crosses(px, px + dx, e.x, e.x + e.dx, gap) && crosses(py, py + dy, e.y, e.y + e.dy, gap);
           if (xy && crosses(pz, pz + dz, e.z, e.z + e.dz)) return false;
           if (pz > EPS && !e.pallet && Math.abs(e.z + e.dz - pz) < EPS) {
-            area += overlapLen(px, px + dx, e.x, e.x + e.dx) * overlapLen(py, py + dy, e.y, e.y + e.dy);
+            // silindir yalnızca aynı ayak izine sahip silindirin üstünde durur; düz kutu üstüne herkes konabilir
+            if (e.cyl) {
+              if (cyl && sameFoot(e, px, py, dx, dy)) area += dx * dy;
+            } else {
+              area += overlapLen(px, px + dx, e.x, e.x + e.dx) * overlapLen(py, py + dy, e.y, e.y + e.dy);
+            }
           }
         }
       }
@@ -76,21 +103,25 @@ class Bin {
   }
 
   tryPlace(item, orients) {
-    const pallet = !!item.palletized;
+    const pallet = floorOnly(item);
+    const cyl = isCyl(item);
+    const tight = cyl && item.tight !== false;
     for (const pt of this.points) {
       if (pallet && pt.z > EPS) continue;
       let best = null;
       for (const [dx, dy, dz] of orients) {
-        if (!this.fits(pt.x, pt.y, pt.z, dx, dy, dz, pallet)) continue;
-        if (!best || dx < best[0] - EPS || (Math.abs(dx - best[0]) < EPS && dz < best[2] - EPS)) best = [dx, dy, dz];
+        const circ = tight && cylKind(item, dx, dy, dz) === "up";
+        if (!this.fits(pt.x, pt.y, pt.z, dx, dy, dz, pallet, circ, cyl)) continue;
+        if (!best || dx < best[0] - EPS || (Math.abs(dx - best[0]) < EPS && dz < best[2] - EPS)) best = [dx, dy, dz, circ];
       }
       if (best) return this.commit(item, pt, best, pallet);
     }
     return null;
   }
 
-  commit(item, pt, [dx, dy, dz], pallet) {
+  commit(item, pt, [dx, dy, dz, circ], pallet) {
     const p = { itemId: item.id, x: pt.x, y: pt.y, z: pt.z, dx, dy, dz, pallet, seq: this.placements.length + 1 };
+    if (isCyl(item)) { p.cyl = true; p.kind = cylKind(item, dx, dy, dz); if (circ) p.circ = true; }
     this.placements.push(p);
     const bx = Math.floor(p.x / BUCKET);
     this.grid[bx][Math.floor(p.y / BUCKET)].push(p);
@@ -101,7 +132,8 @@ class Bin {
     this.weight += item.weight || 0;
 
     // yeni kutunun içinde kalan noktaları sil
-    this.points = this.points.filter((q) => {
+    // dairesel (zikzak) silindirin kutusu içindeki noktalar silinmez: komşu daire kutunun içine, daire dışına düşebilir
+    if (!p.circ) this.points = this.points.filter((q) => {
       const inside = q.x >= p.x - EPS && q.x < p.x + dx - EPS && q.y >= p.y - EPS && q.y < p.y + dy - EPS && q.z >= p.z - EPS && q.z < p.z + dz - EPS;
       if (inside) this.pointKeys.delete(`${q.x},${q.y},${q.z}`);
       return !inside;
@@ -109,13 +141,18 @@ class Bin {
     const g = this.gap;
     const cands = [{ x: p.x + dx + g, y: p.y, z: p.z }, { x: p.x, y: p.y + dy + g, z: p.z }];
     if (!pallet) cands.push({ x: p.x, y: p.y, z: p.z + dz });
+    if (p.circ && p.z < EPS) {
+      // altıgen dizilim: komşu daire, merkezler arası (çap + boşluk) uzaklıkta 30° ve 60° açılarda
+      const s = dx + g, h = (s * Math.sqrt(3)) / 2;
+      cands.push({ x: p.x + h, y: p.y + s / 2, z: p.z }, { x: p.x + h, y: p.y - s / 2, z: p.z }, { x: p.x + s / 2, y: p.y + h, z: p.z }, { x: p.x - s / 2, y: p.y + h, z: p.z });
+    }
     for (const c of cands) this.addPoint(c);
     return p;
   }
 
   addPoint(c) {
     const { C } = this;
-    if (c.x >= C.L - EPS || c.y >= C.W - EPS || c.z >= C.H - EPS) return;
+    if (c.x < -EPS || c.y < -EPS || c.x >= C.L - EPS || c.y >= C.W - EPS || c.z >= C.H - EPS) return;
     const key = `${c.x},${c.y},${c.z}`;
     if (this.pointKeys.has(key)) return;
     const bxLo = Math.max(0, Math.floor((c.x - this.maxDx) / BUCKET)), bxHi = Math.min(this.nx - 1, Math.floor(c.x / BUCKET));
@@ -123,6 +160,7 @@ class Bin {
     for (let bx = bxLo; bx <= bxHi; bx++) {
       for (let by = byLo; by <= byHi; by++) {
         for (const e of this.grid[bx][by]) {
+          if (e.circ) continue;
           if (c.x >= e.x - EPS && c.x < e.x + e.dx - EPS && c.y >= e.y - EPS && c.y < e.y + e.dy - EPS && c.z >= e.z - EPS && c.z < e.z + e.dz - EPS) return;
         }
       }
@@ -157,9 +195,30 @@ export function planAll(items, opts = {}) {
 export const DEFAULT_MAX_UNITS = 20000;
 export const DEFAULT_MAX_WORK = 800_000_000; // fits() çağrısı; bu sınır aşılınca kalan birimler "cap" olarak raporlanır
 
-const faceArea =(it) => (it.palletized || it.upright ? it.l * it.w : Math.max(it.l * it.w, it.l * it.h, it.w * it.h));
+const faceArea = (it) => (isCyl(it) ? Math.max(it.w * it.w, it.l * it.w) : it.palletized || it.upright ? it.l * it.w : Math.max(it.l * it.w, it.l * it.h, it.w * it.h));
 
+/** Silindir varsa birkaç aday plan dener ve en iyisini döndürür: "yön fark etmez" kalemler için planlayıcının seçimi / hep dik / hep yatık,
+ *  zikzak açık kalemler için zikzaklı / düz ızgara (zikzak her ölçüde kazandırmaz). Aday sırası eşitlikte ilk gelen kazanır. */
 export function planLoad(items, containerKey, opts = {}) {
+  const flexible = items.some((it) => isCyl(it) && (it.orient || "any") === "any");
+  const tightAny = items.some((it) => isCyl(it) && it.tight !== false);
+  if (!flexible && !tightAny) return planOnce(items, containerKey, opts);
+  const variant = (orient, flat) => items.map((it) => {
+    if (!isCyl(it)) return it;
+    const o = { ...it };
+    if (orient && (it.orient || "any") === "any") o.orient = orient;
+    if (flat) o.tight = false;
+    return o;
+  });
+  const lists = [];
+  for (const orient of flexible ? [null, "up", "lying"] : [null]) for (const flat of tightAny ? [false, true] : [false]) lists.push(variant(orient, flat));
+  const cands = lists.map((list) => planOnce(list, containerKey, opts));
+  const score = (r) => [r.unplaced.reduce((n, u) => n + u.count, 0), r.containers.length, -(r.fill?.count ?? 0)];
+  const better = (a, b) => { const x = score(a), y = score(b); for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] < y[i]; return false; };
+  return cands.reduce((best, r) => (better(r, best) ? r : best));
+}
+
+function planOnce(items, containerKey, opts = {}) {
   const C = CONTAINERS[containerKey];
   if (!C) throw new Error(`unknown container: ${containerKey}`);
   const gap = opts.gap || 0;
@@ -172,7 +231,7 @@ export function planLoad(items, containerKey, opts = {}) {
   const fixed = items
     .map((it, i) => ({ it, i }))
     .filter(({ it }) => it.qty !== null && it.qty > 0)
-    .sort((a, b) => (Number(!!b.it.palletized) - Number(!!a.it.palletized)) || (faceArea(b.it) - faceArea(a.it)) || (a.i - b.i))
+    .sort((a, b) => (Number(floorOnly(b.it)) - Number(floorOnly(a.it))) || (faceArea(b.it) - faceArea(a.it)) || (a.i - b.i))
     .map(({ it }) => it);
 
   const bins = [];

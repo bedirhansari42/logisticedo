@@ -1,6 +1,8 @@
 import { ICONS } from "@common";
 
 const P = {
+  company: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M3.5 17.5v-13a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v13M11.5 8.5h4a1 1 0 0 1 1 1v8M2.5 17.5h15"/><path d="M6.5 6.5h2M6.5 9.5h2M6.5 12.5h2"/></svg>',
+  bank: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M2.5 8 10 3l7.5 5M4 8v7.5M8 8v7.5M12 8v7.5M16 8v7.5M2.5 17h15"/></svg>',
   dashboard: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="7.5" rx="1.5"/><rect x="11.5" y="2.5" width="6" height="4.5" rx="1.5"/><rect x="2.5" y="13" width="6" height="4.5" rx="1.5"/><rect x="11.5" y="10" width="6" height="7.5" rx="1.5"/></svg>',
   shipments: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M2.5 5.5 10 2l7.5 3.5v9L10 18l-7.5-3.5v-9Z"/><path d="M2.5 5.5 10 9l7.5-3.5M10 9v9"/></svg>',
   planner: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><rect x="2" y="5" width="16" height="10" rx="1.5"/><path d="M6 5v10M10 5v10M14 5v10M2 9h4M10 11h4"/></svg>',

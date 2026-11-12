@@ -5,7 +5,12 @@ import { Brand, Icon } from "./Icons.jsx";
 const NAV = [
   ["dashboard", "/", "dashboard", "d.nav.dashboard"],
   ["shipments", "/shipments", "shipments", "d.nav.shipments"],
-  ["planner", "/planner", "planner", "d.nav.planner"],
+  ["planner", "/planner", "planner", "d.nav.planner"]
+];
+// "Şirket bilgileri" grubu
+const COMPANY_NAV = [
+  ["companies", "/companies", "company", "d.nav.companies"],
+  ["banks", "/banks", "bank", "d.nav.banks"],
   ["letterheads", "/letterheads", "letterhead", "d.nav.letterheads"]
 ];
 
@@ -22,6 +27,12 @@ export function Sidebar({ route }) {
           <a key={key} href={`#${path}`} className={active === key ? "is-active" : ""} aria-current={active === key ? "page" : undefined} title={t(label)}>
             <Icon name={icon} /><span className="side-label">{t(label)}</span>
             {key === "shipments" && shipments.length > 0 && <em className="side-count">{shipments.length}</em>}
+          </a>
+        ))}
+        <p className="side-group side-label">{t("d.nav.company")}</p>
+        {COMPANY_NAV.map(([key, path, icon, label]) => (
+          <a key={key} href={`#${path}`} className={active === key ? "is-active" : ""} aria-current={active === key ? "page" : undefined} title={t(label)}>
+            <Icon name={icon} /><span className="side-label">{t(label)}</span>
           </a>
         ))}
       </nav>

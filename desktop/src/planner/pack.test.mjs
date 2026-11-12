@@ -237,3 +237,129 @@ test("minor: fill reason explains a zero result", () => {
   assert.ok(ok.fill.count > 0);
   assert.equal(ok.fill.reason, undefined);
 });
+
+// ------------------------------------------------------------------ silindirik yükler
+const cyl = (o) => item({ shape: "cyl", l: 100, w: 60, h: 60, orient: "up", stackable: true, tight: true, qty: 1, ...o }); // l = boy, w = çap
+const kinds = (r) => new Set(all(r).map((p) => p.kind));
+
+test("cylinder: upright uses d x d footprint and length as height", () => {
+  const c = cyl({ l: 150, w: 50, orient: "up" });
+  const r = planLoad([c], "20");
+  const p = all(r)[0];
+  assert.deepEqual([p.dx, p.dy, p.dz, p.kind, p.cyl], [50, 50, 150, "up", true]);
+  checkValid(r);
+});
+
+test("cylinder: lying uses length x d footprint and d as height", () => {
+  const c = cyl({ l: 150, w: 50, orient: "lying", qty: 5 });
+  const r = planLoad([c], "20");
+  assert.ok(all(r).every((p) => p.dz === 50 && Math.max(p.dx, p.dy) === 150 && Math.min(p.dx, p.dy) === 50 && p.kind !== "up"));
+  checkValid(r);
+});
+
+test("cylinder: staggered packing fits more than the square grid and stays valid", () => {
+  const tight = planLoad([cyl({ qty: null })], "20");
+  const flat = planLoad([cyl({ qty: null, tight: false })], "20");
+  assert.equal(flat.fill.count, 54);
+  assert.ok(tight.fill.count > flat.fill.count, `${tight.fill.count} vs ${flat.fill.count}`);
+  assert.ok(all(tight).some((p) => p.circ));
+  checkValid(tight);
+  checkValid(flat);
+});
+
+test("cylinder: staggering never makes the plan worse (falls back to the grid)", () => {
+  const c = cyl({ l: 200, w: 100, qty: null });
+  const tight = planLoad([c], "20");
+  const flat = planLoad([{ ...c, tight: false }], "20");
+  assert.ok(tight.fill.count >= flat.fill.count);
+  checkValid(tight);
+});
+
+test("cylinder: gap is respected between staggered circles", () => {
+  const r = planLoad([cyl({ qty: null })], "20", { gap: 3 });
+  assert.ok(r.fill.count > 0);
+  checkValid(r, 3);
+});
+
+test("cylinder: non-stackable stays on the floor with nothing on top", () => {
+  const a = cyl({ qty: null, stackable: false });
+  const r = planLoad([a], "20");
+  assert.ok(all(r).every((p) => p.z === 0 && p.pallet === true));
+  checkValid(r);
+  const stackable = planLoad([cyl({ qty: null })], "20");
+  assert.ok(stackable.fill.count > r.fill.count);
+  assert.ok(all(stackable).some((p) => p.z > 0));
+});
+
+test("cylinder: stacked cylinders sit exactly on top of each other", () => {
+  const r = planLoad([cyl({ qty: 40, tight: false })], "20");
+  for (const p of all(r).filter((q) => q.z > 0)) {
+    assert.ok(all(r).some((s) => s.cyl && s.x === p.x && s.y === p.y && s.dx === p.dx && s.dy === p.dy && s.z + s.dz === p.z));
+  }
+  checkValid(r);
+});
+
+test("cylinder: nothing but cylinders stacks on a cylinder, boxes never go on top", () => {
+  const r = planLoad([cyl({ qty: 6, l: 100, w: 100, tight: false }), item({ l: 100, w: 100, h: 30, qty: 6 })], "20");
+  const placements = all(r);
+  for (const p of placements.filter((q) => !q.cyl && q.z > 0)) {
+    assert.ok(!placements.some((s) => s.cyl && s.z + s.dz === p.z && s.x < p.x + p.dx && p.x < s.x + s.dx && s.y < p.y + p.dy && p.y < s.y + s.dy));
+  }
+  checkValid(r);
+});
+
+test("cylinder: a cylinder may sit on a flat box that fully covers its footprint", () => {
+  const r = planLoad([item({ l: 120, w: 120, h: 120, qty: 1 }), cyl({ l: 80, w: 100, orient: "up", qty: 1 })], "20");
+  assert.equal(all(r).length, 2);
+  checkValid(r);
+});
+
+test("cylinder: 'any' orientation picks the best of up / lying and is never worse than either", () => {
+  const base = { l: 120, w: 70, qty: null };
+  const any = planLoad([cyl({ ...base, orient: "any" })], "20");
+  const up = planLoad([cyl({ ...base, orient: "up" })], "20");
+  const lying = planLoad([cyl({ ...base, orient: "lying" })], "20");
+  assert.ok(any.fill.count >= Math.max(up.fill.count, lying.fill.count));
+  checkValid(any);
+});
+
+test("cylinder: too big for the container is reported, rest is planned", () => {
+  const huge = cyl({ l: 3000, w: 400, qty: 2 });
+  const ok = cyl({ qty: 3 });
+  const r = planLoad([huge, ok], "40");
+  assert.equal(unplacedCount(r, huge.id), 2);
+  assert.equal(placedCount(r, ok.id), 3);
+});
+
+test("cylinder: fixed quantity of a mixed list (cylinders and boxes, random) is valid", () => {
+  for (const seed of [1, 2, 3, 4, 5]) {
+    const rand = rng(seed);
+    const items = [];
+    for (let i = 0; i < 6; i++) {
+      items.push(rand() < 0.5
+        ? cyl({ l: 40 + rand() * 120, w: 30 + rand() * 50, orient: ["any", "up", "lying"][i % 3], stackable: rand() < 0.6, tight: rand() < 0.7, qty: 5 + Math.floor(rand() * 40) })
+        : item({ l: 20 + rand() * 80, w: 20 + rand() * 60, h: 20 + rand() * 60, palletized: rand() < 0.3, qty: 5 + Math.floor(rand() * 40) }));
+    }
+    for (const key of ["20", "40hc"]) {
+      const r = planLoad(items, key, { gap: seed === 5 ? 2 : 0 });
+      checkValid(r, seed === 5 ? 2 : 0);
+      for (const it of items) assert.equal(placedCount(r, it.id) + unplacedCount(r, it.id), it.qty);
+    }
+  }
+});
+
+test("cylinder: results are deterministic", () => {
+  const items = [cyl({ qty: 30, orient: "any" }), cyl({ qty: null, l: 70, w: 45, orient: "any" })];
+  assert.deepEqual(planLoad(items, "40"), planLoad(items, "40"));
+});
+
+test("cylinder: validator rejects overlapping circles and box-on-cylinder", () => {
+  const C = CONTAINERS["20"];
+  const c1 = { itemId: "a", x: 0, y: 0, z: 0, dx: 60, dy: 60, dz: 100, pallet: false, seq: 1, cyl: true, kind: "up", circ: true };
+  const c2 = { ...c1, x: 40, y: 40, seq: 2 }; // bbox çakışır, daireler de çakışır (merkezler 56.6 < 60)
+  assert.equal(validatePlan(C, [c1, c2]).ok, false);
+  const c3 = { ...c1, x: 52, y: 30, seq: 2 }; // merkezler arası ~60.6 ≥ 60: bbox çakışır ama daireler çakışmaz
+  assert.equal(validatePlan(C, [c1, c3]).ok, true);
+  const box = { itemId: "b", x: 0, y: 0, z: 100, dx: 60, dy: 60, dz: 20, pallet: false, seq: 2 };
+  assert.equal(validatePlan(C, [c1, box]).ok, false);
+});

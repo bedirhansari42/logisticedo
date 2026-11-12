@@ -28,7 +28,7 @@ export function useShipment(id) {
       if (!rec) { setStatus("missing"); return; }
       const state = migrate(rec.state);
       if (rec.lang && rec.lang !== getLang()) relocalize(state, rec.lang, getLang());
-      setMeta({ id: rec.id, status: rec.status, lhId: rec.lhId, createdAt: rec.createdAt, parse: rec.parse || null });
+      setMeta({ id: rec.id, status: rec.status, lhId: rec.lhId, companyId: rec.companyId || null, bankId: rec.bankId || null, bankAuto: rec.bankAuto !== false, createdAt: rec.createdAt, parse: rec.parse || null });
       setDoc({ state, auto: new Set(rec.auto || []) });
       setSaving("saved");
       setStatus("ready");

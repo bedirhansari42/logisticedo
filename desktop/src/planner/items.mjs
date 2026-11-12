@@ -6,7 +6,9 @@ export const DEFAULT_GAP = 0;
 let counter = 0;
 const uid = () => `r${Date.now().toString(36)}${(++counter).toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-export const newRow = () => ({ id: uid(), name: "", l: "", w: "", h: "", qty: "", weight: "", palletized: false, upright: false });
+export const ORIENTS = ["any", "up", "lying"];
+// shape "cyl": l = boy (uzunluk), w = çap; h kullanılmaz
+export const newRow = () => ({ id: uid(), name: "", l: "", w: "", h: "", qty: "", weight: "", palletized: false, upright: false, shape: "box", orient: "any", stackable: true });
 
 export const MIN_DIM = 0.1; // cm
 
@@ -36,7 +38,8 @@ export function parseItemRow(row) {
     if (r.kind !== "ok" || r.n < MIN_DIM) { bad(field, r, "d.pl.err.dim"); return null; }
     return r.n;
   };
-  const l = dim("l"), w = dim("w"), h = dim("h");
+  const cyl = row.shape === "cyl";
+  const l = dim("l"), w = dim("w"), h = cyl ? null : dim("h");
 
   let qty = null;
   const q = read(row.qty);
@@ -53,10 +56,17 @@ export function parseItemRow(row) {
   }
 
   if (errors.length) return { ok: false, errors };
-  return {
-    ok: true,
-    item: { id: row.id, name: String(row.name ?? "").trim() || "Item", l, w, h, qty, palletized: !!row.palletized, upright: !!row.upright, weight }
-  };
+  const name = String(row.name ?? "").trim() || "Item";
+  if (cyl) {
+    return {
+      ok: true,
+      item: {
+        id: row.id, name, shape: "cyl", l, w, h: w, qty, palletized: false, upright: false, weight,
+        orient: ORIENTS.includes(row.orient) ? row.orient : "any", stackable: row.stackable !== false, tight: true
+      }
+    };
+  }
+  return { ok: true, item: { id: row.id, name, l, w, h, qty, palletized: !!row.palletized, upright: !!row.upright, weight } };
 }
 
 const defaultDraft = () => ({ rows: [newRow()], gap: DEFAULT_GAP, container: "40hc" });

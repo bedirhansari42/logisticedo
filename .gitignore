@@ -19,3 +19,6 @@ desktop/dist/
 desktop/public/vendor/
 desktop/public/assets/
 desktop/public/favicon.svg
+
+# Taslak (brainstorm) çıktıları
+.superpowers/

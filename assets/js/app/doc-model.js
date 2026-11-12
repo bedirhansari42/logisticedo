@@ -253,7 +253,7 @@ export function distribute(s, basis = "qty") {
     const fl = raw.map(Math.floor);
     let left = Math.round(tp) - fl.reduce((a, b) => a + b, 0);
     raw.map((v, i) => [v - fl[i], i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (left > 0) { fl[i]++; left--; } });
-    s.items.forEach((it, i) => { it.packages = toInput(fl[i], dec); if (!it.packageType) it.packageType = s.packing.packageType || ""; });
+    s.items.forEach((it, i) => { it.packages = toInput(fl[i], dec); });
   }
   if (tn != null) share(tn, 2).forEach((v, i) => { s.items[i].netWeight = toInput(v, dec); });
   if (tg != null) share(tg, 2).forEach((v, i) => { s.items[i].grossWeight = toInput(v, dec); });
@@ -329,6 +329,41 @@ export function amountInWords(amount, currency) {
   let s = `SAY: ONLY ${intToWords(major)}`.replace(/\s+/g, " ");
   if (minor && min) s += ` AND ${min} ${intToWords(minor)}`;
   return `${s}${currency ? " " + currency : ""}`;
+}
+
+/** Kalemin geçerli ambalaj türü: kendi değeri; boşsa genel "Ambalaj türü" (kopyalanmaz, her çıktıda okunur) */
+export function itemPackageType(it, s) {
+  return String(it.packageType || "").trim() || String(s.packing.packageType || "").trim();
+}
+
+/** Toplam koli ve türleri: [{ type, count }]. Kalemler tek türdeyse o tür, birden çok türdeyse her biri ayrı; kalemlerden gelmeyen
+ *  (elle yazılmış) toplamda ya da koli sayısı yoksa genel tür kullanılır. */
+export function packageParts(s, T) {
+  const fallback = String(s.packing.packageType || "").trim() || "PACKAGES";
+  const total = T.packages;
+  if (total == null || !(total > 0)) return [];
+  const by = new Map();
+  for (const it of s.items) {
+    const n = num(it.packages);
+    if (n > 0) { const t = itemPackageType(it, s).toUpperCase() || fallback.toUpperCase(); by.set(t, (by.get(t) || 0) + n); }
+  }
+  const sum = [...by.values()].reduce((a, b) => a + b, 0);
+  if (by.size && Math.abs(sum - total) < 1e-9) return [...by].map(([type, count]) => ({ type, count }));
+  return [{ type: fallback, count: total }];
+}
+
+/** "12 CARTONS + 3 PALLETS" ya da words ile "TWELVE (12) CARTONS + THREE (3) PALLETS"; yazıyla yazılamıyorsa (tam sayı değil) "" */
+export function packagesText(s, T, { words = false } = {}) {
+  const parts = packageParts(s, T);
+  if (!parts.length) return "";
+  const out = parts.map((p) => (words ? packagesInWords(p.count, p.type) : `${fmtQty(p.count)} ${p.type}`));
+  return out.some((x) => !x) ? "" : out.join(" + ");
+}
+
+/** Özet satırındaki tür sütunu: tek tür varsa o, karışıksa "CARTONS / PALLETS" */
+export function packageTypeLabel(s, T) {
+  const parts = packageParts(s, T);
+  return parts.length ? parts.map((p) => p.type).join(" / ") : String(s.packing.packageType || "").trim();
 }
 
 export function packagesInWords(n, type) {

@@ -14,11 +14,32 @@ export const ALL_DOCS = DOC_GROUPS.flatMap((g) => g.docs);
 
 /** Her belgenin forma ait bölümleri (form-schema.json harfleri) */
 export const DOC_SECTIONS = {
-  ci: ["A"], pl: ["A", "F"], pallet: ["O"], contract: ["R"], bill: ["S"],
-  si: ["I"], bl: ["I"], prealert: ["N"], cmr: ["P"], labels: ["T"],
+  ci: ["A", "B", "C", "D", "E", "F", "G", "H"], pl: ["A", "F"], pallet: ["O"], contract: ["R"], bill: ["S"],
+  si: ["A", "B", "C", "F", "I"], bl: ["A", "B", "C", "F", "I"], prealert: ["N"], cmr: ["P"], labels: ["T"],
   loading: ["K"], trans: ["M"], ins: ["L"],
   origin: ["J"], coo: ["K"], eur1: ["K"], poa: ["Q"]
 };
+
+/** Bir bölümün yalnızca belirtilen alanlarını gösteren belgeler: { belge: { bölüm harfi: [alan yolları ya da alt başlık anahtarları] } }.
+ *  Fatura sayfasında teslim şartı ve toplamlar var; limanlar, gemi vb. faturada basılmadığı için yok. */
+const list = (s) => s.split(" "); // boşlukla ayrılmış: çeviri denetimi tırnaklı çiftleri anahtar sanıyor
+const TRANSPORT_ONLY = {
+  A: list("meta.invoiceNo meta.invoiceDate meta.orderRef"),
+  C: list("shipment.transportMode shipment.portLoading shipment.portDischarge shipment.finalDestination shipment.vessel shipment.containerNo shipment.shipmentDate shipment.incoterm shipment.incotermPlace"),
+  F: list("packing.packageType packing.marks f.totalsTitle packing.totalPackages packing.totalNet packing.totalGross packing.totalVolume")
+};
+const SHIP_COMMON = "ship.bookingNo ship.carrier ship.placeReceipt ship.placeDelivery ship.freightTerms ship.originals ship.blType ship.goodsDescription";
+export const DOC_ONLY = {
+  si: { ...TRANSPORT_ONLY, I: list(`ship.siNo ship.forwarder ${SHIP_COMMON} ship.instructions`) },
+  bl: { ...TRANSPORT_ONLY, I: list(`ship.blNo ${SHIP_COMMON}`) },
+  ci: {
+    C: list("shipment.incoterm shipment.incotermPlace"),
+    F: list("f.totalsTitle packing.totalPackages packing.totalNet packing.totalGross packing.totalVolume options.showWeightsOnInvoice")
+  }
+};
+
+/** Ortak bir bölümün başlığını belgeye göre değiştirir: { belge: { bölüm harfi: başlık çeviri anahtarı } } */
+export const DOC_TITLE = { si: { I: "pv.si" }, bl: { I: "pv.bl" } };
 
 /** Belgeye bağlı olmayan, ortak bilgi adımları */
 export const STEPS = {
@@ -205,9 +226,9 @@ export function docStatus(state, doc) {
   return JSON.stringify(state[key]) !== JSON.stringify(createEmptyState()[key]) ? "ready" : "empty";
 }
 
-export function newShipmentRecord({ state, auto = new Set(), lhId = null, parse = null }) {
+export function newShipmentRecord({ state, auto = new Set(), lhId = null, parse = null, companyId = null }) {
   const now = Date.now();
-  return { id: uid(), status: "draft", lhId, createdAt: now, updatedAt: now, state, auto: [...auto], parse, summary: summarize(state) };
+  return { id: uid(), status: "draft", lhId, companyId, bankId: null, bankAuto: true, createdAt: now, updatedAt: now, state, auto: [...auto], parse, summary: summarize(state) };
 }
 
 export const shipmentTitle = (rec) => rec.summary?.invoiceNo || rec.summary?.proformaNo || "";

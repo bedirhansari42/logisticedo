@@ -50,3 +50,11 @@ test("fill result and unplaced items are accepted", async () => {
   const bytes = await buildPlanPdf(result, items, deps);
   assert.ok((await pageCount(bytes)) >= 2);
 });
+
+test("pdf: cylinder items (upright and lying) export", async () => {
+  const cyl = (id, o) => ({ id, name: id, shape: "cyl", l: 120, w: 60, h: 60, qty: 30, palletized: false, upright: false, orient: "up", stackable: true, tight: true, weight: undefined, ...o });
+  const items = [cyl("Reel A"), cyl("Reel B", { orient: "lying", l: 150, w: 50, h: 50, qty: 10, stackable: false })];
+  const bytes = await buildPlanPdf(planLoad(items, "40"), items, deps);
+  assert.equal(Buffer.from(bytes).subarray(0, 5).toString(), "%PDF-");
+  if (process.env.LGX_PDF_OUT) (await import("node:fs")).writeFileSync(process.env.LGX_PDF_OUT, bytes);
+});

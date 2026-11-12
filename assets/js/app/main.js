@@ -464,7 +464,7 @@ function bindItems() {
   });
   $("#addItem").addEventListener("click", () => {
     const last = app.state.items[app.state.items.length - 1];
-    app.state.items.push(newItem({ unit: last?.unit || "PCS", packageType: last?.packageType || "" }));
+    app.state.items.push(newItem({ unit: last?.unit || "PCS", packageType: "" }));
     renderItems();
     updateTotals();
     changed();

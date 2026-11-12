@@ -1197,17 +1197,6 @@
     },
     {
      "kind": "field",
-     "bind": "cmr.packing",
-     "control": "input",
-     "labelKey": "f.cmrPacking",
-     "labelText": "",
-     "span": 1,
-     "type": "text",
-     "grid": 0,
-     "cols": 3
-    },
-    {
-     "kind": "field",
      "bind": "cmr.takingPlace",
      "control": "input",
      "labelKey": "f.cmrTakingPlace",
