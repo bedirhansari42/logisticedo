@@ -59,10 +59,10 @@ export function Settings() {
       const v = validateBackup(backup);
       if (!v.ok) { toast(t(v.key), "error", 8000); return; }
       const date = new Date(backup.createdAt || 0).toLocaleDateString(lang === "tr" ? "tr-TR" : "en-GB");
-      if (!window.confirm(t("d.bk.confirm", { date, s: v.summary.shipments, l: v.summary.letterheads, c: v.summary.companies }))) return;
+      if (!window.confirm(t("d.bk.confirm", { date, s: v.summary.shipments, l: v.summary.letterheads, c: v.summary.companies, n: v.summary.notes }))) return;
       const plan = await planRestore(backup, await collectSnapshot());
       await applyPlan(plan);
-      const sum = ["shipments", "letterheads", "companies"].reduce((a, k) => ({ added: a.added + plan.counts[k].added, updated: a.updated + plan.counts[k].updated }), { added: 0, updated: 0 });
+      const sum = ["shipments", "letterheads", "companies", "notes"].reduce((a, k) => ({ added: a.added + plan.counts[k].added, updated: a.updated + plan.counts[k].updated }), { added: 0, updated: 0 });
       toast(t("d.bk.done", sum), "ok");
       setTimeout(() => window.location.reload(), 900); // listeler, dil ve tema yeniden yüklensin
     } catch (e) {

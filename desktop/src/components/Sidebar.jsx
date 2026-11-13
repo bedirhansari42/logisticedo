@@ -7,7 +7,8 @@ const NAV = [
   ["dashboard", "/", "dashboard", "d.nav.dashboard"],
   ["shipments", "/shipments", "shipments", "d.nav.shipments"],
   ["planner", "/planner", "planner", "d.nav.planner"],
-  ["landed", "/landed", "landed", "d.nav.landed"]
+  ["landed", "/landed", "landed", "d.nav.landed"],
+  ["notes", "/notes", "notes", "d.nav.notes"]
 ];
 // "Şirket bilgileri" grubu
 const COMPANY_NAV = [

@@ -13,6 +13,7 @@ import { Letterheads } from "./pages/Letterheads.jsx";
 import { Settings } from "./pages/Settings.jsx";
 import { Planner } from "./pages/Planner.jsx";
 import { Landed } from "./pages/Landed.jsx";
+import { Notes } from "./pages/Notes.jsx";
 import { Companies } from "./pages/Companies.jsx";
 import { Banks } from "./pages/Banks.jsx";
 
@@ -27,6 +28,7 @@ function Pages({ route }) {
     case "settings": return <Settings />;
     case "planner": return <Planner />;
     case "landed": return <Landed />;
+    case "notes": return <Notes />;
     default: return <Dashboard />;
   }
 }

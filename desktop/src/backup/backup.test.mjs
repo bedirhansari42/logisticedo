@@ -29,7 +29,7 @@ test("large blobs encode (no call stack overflow)", async () => {
 test("backup has format, version and a summary", async () => {
   const b = await createBackup(snap({ shipments: [{ id: "s1" }, { id: "s2" }], letterheads: [{ id: "l" }], kv: { companies: [{ id: "c1" }] } }), { now: 1000, appVersion: "1.2.3" });
   assert.deepEqual([b.format, b.version, b.createdAt, b.appVersion], ["logisticedo-backup", BACKUP_VERSION, 1000, "1.2.3"]);
-  assert.deepEqual(validateBackup(b).summary, { shipments: 2, letterheads: 1, companies: 1 });
+  assert.deepEqual(validateBackup(b).summary, { shipments: 2, letterheads: 1, companies: 1, notes: 0 });
 });
 
 test("invalid files are rejected with a message key", async () => {
@@ -76,4 +76,37 @@ test("createBackup and planRestore do not mutate their inputs", async () => {
   const b = await createBackup(s);
   await planRestore(await roundtrip(b), s);
   assert.equal(JSON.stringify(s), before);
+});
+
+// ---- Notlar (kanban) ----
+const board = (cols, cards) => ({ columns: cols.map(([id, name]) => ({ id, name })), cards });
+const card = (id, columnId, updatedAt, title) => ({ id, columnId, title, note: "", label: null, due: null, order: 1, createdAt: 1, updatedAt });
+
+test("notes count appears in the summary", async () => {
+  const b = await createBackup(snap({ kv: { notes: board([["c1", "A"]], [card("k1", "c1", 1, "x"), card("k2", "c1", 1, "y")]) } }));
+  assert.equal(validateBackup(b).summary.notes, 2);
+});
+
+test("restoring notes merges columns and cards: newer card wins, local-only kept, nothing deleted", async () => {
+  const local = board([["c1", "Local A"], ["c3", "Only local"]], [card("k1", "c1", 10, "local"), card("k9", "c3", 5, "only local")]);
+  const file = board([["c1", "File A"], ["c2", "File B"]], [card("k1", "c1", 20, "file"), card("k2", "c2", 1, "new")]);
+  const plan = await planRestore(await roundtrip(await createBackup(snap({ kv: { notes: file } }))), snap({ kv: { notes: local } }));
+  const n = plan.kv.notes;
+  assert.deepEqual(n.columns.map((c) => [c.id, c.name]), [["c1", "Local A"], ["c3", "Only local"], ["c2", "File B"]]);
+  assert.deepEqual(n.cards.map((c) => [c.id, c.title]).sort(), [["k1", "file"], ["k2", "new"], ["k9", "only local"]]);
+  assert.deepEqual(plan.counts.notes, { added: 1, updated: 1, kept: 0 });
+});
+
+test("an older card in the file does not overwrite a newer local one", async () => {
+  const local = board([["c1", "A"]], [card("k1", "c1", 30, "local")]);
+  const file = board([["c1", "A"]], [card("k1", "c1", 20, "file")]);
+  const plan = await planRestore(await roundtrip(await createBackup(snap({ kv: { notes: file } }))), snap({ kv: { notes: local } }));
+  assert.equal(plan.kv.notes, undefined);
+  assert.deepEqual(plan.counts.notes, { added: 0, updated: 0, kept: 1 });
+});
+
+test("with no local notes the file's board is restored as is", async () => {
+  const file = board([["c1", "A"]], [card("k1", "c1", 20, "file")]);
+  const plan = await planRestore(await roundtrip(await createBackup(snap({ kv: { notes: file } }))), snap());
+  assert.deepEqual(plan.kv.notes, file);
 });
