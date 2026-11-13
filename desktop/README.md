@@ -77,3 +77,9 @@ Paketler **imzasız**. Müşteri bilgisayarlarında macOS "geliştiricisi doğru
 - **Windows:** kod imzalama sertifikası (OV/EV).
 
 Gerekli gizli değişkenler `release.yml` içinde yorum olarak hazır.
+
+## İthalat maliyeti (landed cost)
+
+`#/landed` sayfası: Türkiye ithalatı için kalem bazlı maliyet çıkarır. Proforma PDF/Excel'den kalemleri okur (mevcut ayrıştırıcı), navlun, sigorta ve yurt içi masrafları kalemlere paylaştırır (değere/ağırlığa/hacme/adede göre), gümrük kıymetinden (CIF) gümrük vergisi, EMY, KKDF, ÖTV ve KDV'yi sırayla hesaplar; gümrükte ödenecek nakdi, indirilebilir KDV'yi ve KDV hariç gerçek maliyeti ayrı gösterir. Çıktı: İngilizce PDF ve formüllü Excel (uygulamayla birebir aynı sonucu verir).
+
+Motor `src/landed/*.mjs` içindedir (DOM yok): `calc.mjs` (hesap), `model.mjs` (taslak ve girdi ayrıştırma), `proforma.mjs` (aktarım), `xlsx.mjs` / `pdf.mjs` (çıktılar), `xl-eval.mjs` (yalnızca testlerde Excel formüllerini yeniden hesaplar). Testler: `npm run test:landed`. Araç **hiçbir vergi oranını kendisi bilmez**: oranlar ve kurlar kullanıcı girdisidir, sonuç tahmindir. Kurallar (KDV matrahı, KKDF'nin matraha dahil olması, götürü %3 sigorta) web kaynaklarından özetlendi, resmî metinle doğrulanmadı; hesap sırası `docs/superpowers/specs/2026-11-13-landed-cost-design.md` içinde yazılıdır.

@@ -72,8 +72,8 @@ export async function getLetterhead(id) {
   }
 }
 
-export async function saveLetterhead(rec) {
-  rec.updatedAt = Date.now();
+export async function saveLetterhead(rec, { touch = true } = {}) {
+  if (touch) rec.updatedAt = Date.now(); // yedekten yüklerken özgün zaman damgası korunur
   try {
     await tx("letterheads", "readwrite", (s) => reqP(s.put(rec)));
     return true;

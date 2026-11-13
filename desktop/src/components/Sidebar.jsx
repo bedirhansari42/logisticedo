@@ -1,11 +1,13 @@
 import { useT, useLang, setLang } from "../lib/i18n.js";
 import { useApp } from "../lib/app-context.jsx";
+import { useTheme, toggleTheme } from "../lib/theme.js";
 import { Brand, Icon } from "./Icons.jsx";
 
 const NAV = [
   ["dashboard", "/", "dashboard", "d.nav.dashboard"],
   ["shipments", "/shipments", "shipments", "d.nav.shipments"],
-  ["planner", "/planner", "planner", "d.nav.planner"]
+  ["planner", "/planner", "planner", "d.nav.planner"],
+  ["landed", "/landed", "landed", "d.nav.landed"]
 ];
 // "Şirket bilgileri" grubu
 const COMPANY_NAV = [
@@ -18,6 +20,8 @@ export function Sidebar({ route }) {
   const t = useT();
   const lang = useLang();
   const { shipments } = useApp();
+  const theme = useTheme();
+  const themeLabel = theme === "dark" ? t("d.nav.themeLight") : t("d.nav.themeDark");
   const active = route.name === "editor" ? "shipments" : route.name;
   return (
     <aside className="side">
@@ -37,6 +41,9 @@ export function Sidebar({ route }) {
         ))}
       </nav>
       <div className="side-bottom">
+        <button type="button" className="side-link side-theme" onClick={toggleTheme} title={themeLabel} aria-label={themeLabel}>
+          <Icon name={theme === "dark" ? "sun" : "moon"} /><span className="side-label">{themeLabel}</span>
+        </button>
         <a href="#/settings" className={`side-link${route.name === "settings" ? " is-active" : ""}`} title={t("d.nav.settings")}>
           <Icon name="settings" /><span className="side-label">{t("d.nav.settings")}</span>
         </a>

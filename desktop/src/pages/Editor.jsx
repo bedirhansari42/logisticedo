@@ -4,6 +4,7 @@ import { useT, getLang } from "../lib/i18n.js";
 import { useApp } from "../lib/app-context.jsx";
 import { go } from "../lib/router.js";
 import { useShipment } from "../lib/use-shipment.js";
+import { askConfirm } from "../lib/confirm.js";
 import { ALL_DOCS, DOC_GROUPS, DOC_ONLY, DOC_SECTIONS, DOC_TITLE, STATUSES, STEPS, applyProfileToState, docStatus } from "../lib/shipment-state.js";
 import { buildDownload, saveBlob } from "../lib/download.js";
 import { computeTotals, fmtUi } from "@engine/doc-model.js";
@@ -145,6 +146,13 @@ export function Editor({ id, step }) {
 
   const saveLabel = sh.saving === "saved" ? t("d.saved") : t("d.saving");
 
+  const onStatus = async (value) => {
+    if (value === sh.meta.status) return;
+    // Kontrollü seçici: onaylanmazsa değer eski haline döner
+    const ok = await askConfirm({ title: t("d.editor.confirmStatusTitle"), message: t("d.editor.confirmStatus", { from: t(`d.status.${sh.meta.status}`), to: t(`d.status.${value}`) }), confirmLabel: t("d.editor.confirmStatusOk") });
+    if (ok) sh.updateMeta({ status: value });
+  };
+
   return (
     <div className="editor">
       <header className="ed-head">
@@ -152,17 +160,17 @@ export function Editor({ id, step }) {
         <div className="ed-title">
           <h1 title={title}>{title}</h1>
           {state.buyer.name && <span className="muted">{state.buyer.name}</span>}
+          <label className="ed-select">
+            <span className="visually-hidden">{t("d.col.status")}</span>
+            <select className="select" value={sh.meta.status} onChange={(e) => onStatus(e.target.value)}>
+              {STATUSES.map((s) => <option key={s} value={s}>{t(`d.status.${s}`)}</option>)}
+            </select>
+          </label>
         </div>
         <span className={`save-state save-state--${sh.saving}`}><i />{saveLabel}</span>
         <button type="button" className="btn btn--ghost btn--sm" aria-pressed={showPreview} onClick={() => setShowPreview((v) => !v)} title={showPreview ? t("d.editor.hidePreview") : t("d.editor.showPreview")}>
           <Icon name="expand" /><span className="btn-text">{showPreview ? t("d.editor.hidePreview") : t("d.editor.showPreview")}</span>
         </button>
-        <label className="ed-select">
-          <span className="visually-hidden">{t("d.col.status")}</span>
-          <select className="select" value={sh.meta.status} onChange={(e) => sh.updateMeta({ status: e.target.value })}>
-            {STATUSES.map((s) => <option key={s} value={s}>{t(`d.status.${s}`)}</option>)}
-          </select>
-        </label>
         <label className="ed-select">
           <span className="visually-hidden">{t("co.company")}</span>
           <select className="select" value={company ? company.id : "none"} onChange={(e) => onCompany(e.target.value)} title={t("co.company")}>

@@ -16,7 +16,9 @@
     "dist:mac": "npm run build && electron-builder --mac --universal",
     "dist:win": "npm run build && electron-builder --win --x64",
     "dist": "npm run dist:mac && npm run dist:win",
-    "test:planner": "node --test src/planner/*.test.mjs"
+    "test:planner": "node --test src/planner/*.test.mjs",
+    "test:landed": "node --test src/landed/*.test.mjs",
+    "test:backup": "node --test src/backup/*.test.mjs"
   },
   "build": {
     "appId": "com.logisticedo.desktop",
@@ -28,6 +30,8 @@
     },
     "files": [
       "main.js",
+      "preload.js",
+      "backup-main.js",
       "package.json",
       "app/**/*"
     ],

@@ -1,0 +1,79 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { createBackup, validateBackup, planRestore, BACKUP_VERSION, LOCAL_KEYS } from "./backup.mjs";
+
+const snap = (o = {}) => ({ letterheads: [], shipments: [], kv: {}, local: {}, ...o });
+const roundtrip = async (b) => JSON.parse(JSON.stringify(b));
+const bytes = async (blob) => [...new Uint8Array(await blob.arrayBuffer())];
+
+test("blobs survive a JSON round trip with type and bytes", async () => {
+  const lh = { id: "a", name: "Antet", updatedAt: 5, data: new Blob([new Uint8Array([0, 1, 2, 250, 255])], { type: "application/pdf" }), preview: new Blob([new Uint8Array([9, 8])], { type: "image/jpeg" }), thumb: "data:image/jpeg;base64,xx" };
+  const back = await roundtrip(await createBackup(snap({ letterheads: [lh] })));
+  const v = validateBackup(back);
+  assert.equal(v.ok, true);
+  const plan = await planRestore(back, snap());
+  const got = plan.letterheads[0];
+  assert.equal(got.data.type, "application/pdf");
+  assert.deepEqual(await bytes(got.data), [0, 1, 2, 250, 255]);
+  assert.deepEqual(await bytes(got.preview), [9, 8]);
+  assert.equal(got.thumb, lh.thumb);
+});
+
+test("large blobs encode (no call stack overflow)", async () => {
+  const big = new Blob([new Uint8Array(2_000_000).fill(7)], { type: "image/png" });
+  const back = await roundtrip(await createBackup(snap({ letterheads: [{ id: "b", data: big }] })));
+  const plan = await planRestore(back, snap());
+  assert.equal(plan.letterheads[0].data.size, 2_000_000);
+});
+
+test("backup has format, version and a summary", async () => {
+  const b = await createBackup(snap({ shipments: [{ id: "s1" }, { id: "s2" }], letterheads: [{ id: "l" }], kv: { companies: [{ id: "c1" }] } }), { now: 1000, appVersion: "1.2.3" });
+  assert.deepEqual([b.format, b.version, b.createdAt, b.appVersion], ["logisticedo-backup", BACKUP_VERSION, 1000, "1.2.3"]);
+  assert.deepEqual(validateBackup(b).summary, { shipments: 2, letterheads: 1, companies: 1 });
+});
+
+test("invalid files are rejected with a message key", async () => {
+  const good = await createBackup(snap());
+  for (const bad of [null, "x", [], {}, { ...good, format: "other" }, { ...good, data: null }, { ...good, data: { ...good.data, shipments: "no" } }]) {
+    const v = validateBackup(bad);
+    assert.equal(v.ok, false);
+    assert.equal(v.key, "d.bk.err.format");
+  }
+  assert.deepEqual(validateBackup({ ...good, version: BACKUP_VERSION + 1 }), { ok: false, key: "d.bk.err.newer" });
+});
+
+test("restore adds missing records and keeps the newer one", async () => {
+  const backup = await roundtrip(await createBackup(snap({ shipments: [{ id: "new", updatedAt: 1 }, { id: "both-newer-in-file", updatedAt: 20, v: "file" }, { id: "both-older-in-file", updatedAt: 5, v: "file" }] })));
+  const current = snap({ shipments: [{ id: "both-newer-in-file", updatedAt: 10, v: "local" }, { id: "both-older-in-file", updatedAt: 9, v: "local" }, { id: "only-local", updatedAt: 1 }] });
+  const plan = await planRestore(backup, current);
+  assert.deepEqual(plan.shipments.map((s) => [s.id, s.v]).sort(), [["both-newer-in-file", "file"], ["new", undefined]]);
+  assert.deepEqual(plan.counts.shipments, { added: 1, updated: 1, kept: 1 });
+});
+
+test("restore never deletes: local-only records are not in the plan", async () => {
+  const plan = await planRestore(await roundtrip(await createBackup(snap())), snap({ shipments: [{ id: "x" }] }));
+  assert.deepEqual(plan.shipments, []);
+});
+
+test("companies merge by id; scalar kv keys only fill gaps", async () => {
+  const backup = await roundtrip(await createBackup(snap({ kv: { companies: [{ id: "c1", name: "File" }, { id: "c2", name: "New" }], lhId: "lhFile", companyId: "c1" } })));
+  const plan = await planRestore(backup, snap({ kv: { companies: [{ id: "c1", name: "Local" }], lhId: "lhLocal" } }));
+  assert.deepEqual(plan.kv.companies.map((c) => [c.id, c.name]), [["c1", "Local"], ["c2", "New"]]);
+  assert.equal(plan.kv.lhId, undefined);
+  assert.equal(plan.kv.companyId, "c1");
+});
+
+test("only whitelisted local keys are restored", async () => {
+  const backup = await roundtrip(await createBackup(snap({ local: { "lgx.theme": "light", "lgx.planner": "{}", evil: "x", "lgx.other": "y" } })));
+  const plan = await planRestore(backup, snap());
+  assert.deepEqual(Object.keys(plan.local).sort(), ["lgx.planner", "lgx.theme"]);
+  assert.ok(LOCAL_KEYS.includes("lgx.landed"));
+});
+
+test("createBackup and planRestore do not mutate their inputs", async () => {
+  const s = snap({ shipments: [{ id: "s", updatedAt: 1 }], kv: { companies: [{ id: "c" }] } });
+  const before = JSON.stringify(s);
+  const b = await createBackup(s);
+  await planRestore(await roundtrip(b), s);
+  assert.equal(JSON.stringify(s), before);
+});

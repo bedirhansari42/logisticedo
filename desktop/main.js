@@ -1,5 +1,5 @@
 "use strict";
-const { app, BrowserWindow, Menu, protocol, net, shell, session } = require("electron");
+const { app, BrowserWindow, Menu, protocol, net, shell, session, dialog, ipcMain } = require("electron");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 
@@ -73,6 +73,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      preload: path.join(__dirname, "preload.js"),
       spellcheck: false,
       backgroundThrottling: !TEST_MODE
     }
@@ -123,6 +124,11 @@ app.whenReady().then(() => {
   // Geliştirmede (paketlenmemiş) Dock simgesi Electron'unki olur; kendi simgemizi koy
   if (process.platform === "darwin" && app.dock && !app.isPackaged) app.dock.setIcon(path.join(__dirname, "build", "icon.png"));
   hookDownloads(session.defaultSession);
+  require("./backup-main.js").register({
+    dialog, ipcMain, getWindow: () => win, testDir: process.env.LGX_TEST_DIR || null,
+    // yalnızca kendi sayfamızdan gelen istekler (uygulama protokolü ya da geliştirme sunucusu)
+    isTrusted: (e) => { const u = e.senderFrame?.url || ""; return u.startsWith(SCHEME + "://") || !!(DEV_URL && u.startsWith(DEV_URL.replace(/\/$/, ""))); }
+  });
   protocol.handle(SCHEME, serveFile);
   lockNetwork(session.defaultSession);
   buildMenu();

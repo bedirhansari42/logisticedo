@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { AppProvider } from "./lib/app-context.jsx";
 import { useRoute } from "./lib/router.js";
 import { useLang } from "./lib/i18n.js";
+import { useAutoBackup } from "./backup/scheduler.js";
+import { ConfirmHost } from "./components/ConfirmHost.jsx";
 import { Sidebar } from "./components/Sidebar.jsx";
 import { Dashboard } from "./pages/Dashboard.jsx";
 import { Shipments } from "./pages/Shipments.jsx";
@@ -10,6 +12,7 @@ import { Editor } from "./pages/Editor.jsx";
 import { Letterheads } from "./pages/Letterheads.jsx";
 import { Settings } from "./pages/Settings.jsx";
 import { Planner } from "./pages/Planner.jsx";
+import { Landed } from "./pages/Landed.jsx";
 import { Companies } from "./pages/Companies.jsx";
 import { Banks } from "./pages/Banks.jsx";
 
@@ -23,6 +26,7 @@ function Pages({ route }) {
     case "banks": return <Banks />;
     case "settings": return <Settings />;
     case "planner": return <Planner />;
+    case "landed": return <Landed />;
     default: return <Dashboard />;
   }
 }
@@ -30,6 +34,7 @@ function Pages({ route }) {
 export default function App() {
   const route = useRoute();
   const lang = useLang();
+  useAutoBackup();
 
   useEffect(() => { document.documentElement.lang = lang; }, [lang]);
 
@@ -47,6 +52,7 @@ export default function App() {
         <Sidebar route={route} />
         <main className="main"><Pages route={route} /></main>
       </div>
+      <ConfirmHost />
     </AppProvider>
   );
 }
