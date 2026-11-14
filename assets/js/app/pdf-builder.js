@@ -4,7 +4,7 @@ import { loadPdfLib, loadDocFonts } from "./loader.js";
 import { focReasonText } from "./foc.js";
 import {
   computeTotals, itemCurrency, itemVatRate, num, lineAmount, fmtMoney, fmtPrice, fmtQty, fmtWeight, fmtVolume, fmtDate,
-  amountInWords, packagesInWords, itemPackageType, packagesText, DEFAULT_ORIGIN_STATEMENT, DEFAULT_ORIGIN_STATEMENT_MIXED, itemOrigin, originList, palletVolume
+  amountInWords, packagesInWords, itemPackageType, packagesText, DEFAULT_ORIGIN_STATEMENT, DEFAULT_ORIGIN_STATEMENT_MIXED, DEFAULT_PROFORMA_DECLARATION, itemOrigin, originList, palletVolume
 } from "./doc-model.js";
 
 const MM = 72 / 25.4;
@@ -541,7 +541,6 @@ function signInfo(s, dateIso) {
 
 /* ================================================================== Commercial invoice */
 
-const PROFORMA_NOTE = "This is a proforma invoice and not a demand for payment.";
 const FOC_STATEMENT = "No commercial value. The goods are free of charge and their value is declared for customs purposes only.";
 
 /** Faturaya atıf veren belgelerde etiket: ücretsiz sevkiyatta "Free of Charge Invoice" */
@@ -662,7 +661,8 @@ function renderInvoice(ctx, s, kind = "ci") {
   }
   const bp = s.bank.show && !isFoc ? bankPairs(s.bank) : [];
   const focText = [FOC_STATEMENT, (s.foc?.note || "").trim()].filter(Boolean).join("\n");
-  const sign = d.sign(isPi ? PROFORMA_NOTE : isFoc ? focText : s.sign.showDeclaration ? s.sign.declaration : "", signInfo(s, docDate));
+  const proformaDecl = (st) => (st.proforma?.declaration ?? DEFAULT_PROFORMA_DECLARATION).trim();
+  const sign = d.sign(isPi ? proformaDecl(s) : isFoc ? focText : s.sign.showDeclaration ? s.sign.declaration : "", signInfo(s, docDate));
   if (bp.length) d.row([d.kv("Bank details", bp, 62), sign], [0.5, 0.5]);
   else d.row([sign], [0.5]);
 

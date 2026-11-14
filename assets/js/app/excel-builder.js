@@ -1,7 +1,7 @@
 /* Düzenlenebilir Excel çıktısı (ExcelJS): "Commercial Invoice" ve "Packing List" sayfaları, formüllü. */
 import { loadExcelJS } from "./loader.js";
 import { focReasonText } from "./foc.js";
-import { computeTotals, itemCurrency, itemVatRate, num, lineAmount, fmtDate, amountInWords, itemPackageType, packagesText, packageTypeLabel, round } from "./doc-model.js";
+import { DEFAULT_PROFORMA_DECLARATION, computeTotals, itemCurrency, itemVatRate, num, lineAmount, fmtDate, amountInWords, itemPackageType, packagesText, packageTypeLabel, round } from "./doc-model.js";
 
 const FONT = "Arial";
 const GREY = "FFEEF1F2";
@@ -104,7 +104,6 @@ function infoPairs(ws, r, pairs, cols) {
   return r;
 }
 
-const PROFORMA_NOTE = "This is a proforma invoice and not a demand for payment.";
 const FOC_STATEMENT = "No commercial value. The goods are free of charge and their value is declared for customs purposes only.";
 /** Faturaya atıf veren etiket: ücretsiz sevkiyatta "Free of Charge Invoice" */
 const invRefLabel = (s) => (s.foc?.enabled ? "Free of Charge Invoice" : "Commercial Invoice");
@@ -272,7 +271,7 @@ function invoiceSheet(wb, s, kind = "ci") {
       r++;
     }
   }
-  signature(ws, r, 8, s, true, isPi ? { text: PROFORMA_NOTE, date: s.meta.proformaDate } : isFoc ? { text: [FOC_STATEMENT, (s.foc?.note || "").trim()].filter(Boolean).join(" ") } : {});
+  signature(ws, r, 8, s, true, isPi ? { text: (s.proforma?.declaration ?? DEFAULT_PROFORMA_DECLARATION).trim(), date: s.meta.proformaDate } : isFoc ? { text: [FOC_STATEMENT, (s.foc?.note || "").trim()].filter(Boolean).join(" ") } : {});
   return ws;
 }
 

@@ -23,6 +23,7 @@ export const DEFAULT_POA_SCOPE = [
   "5. To appoint substitutes or sub-agents where necessary and to take all other actions required to complete customs clearance."
 ].join("\n");
 
+export const DEFAULT_PROFORMA_DECLARATION = "This is a proforma invoice and not a demand for payment.";
 export const DEFAULT_DECLARATION = "We hereby certify that this invoice shows the actual price of the goods described, that all particulars are true and correct, and that the goods are of the origin stated above.";
 
 let seq = 0;
@@ -107,7 +108,7 @@ export function createEmptyState() {
     trans: { to: "", loadAddress: "", loadDate: "", unloadAddress: "", deliveryDate: "", vehicleType: "", freight: "", paymentTerms: "", notes: "" },
     preAlert: { to: "", eta: "", docsExtra: "", notes: "" },
     origin: { certNo: "", statement: DEFAULT_ORIGIN_STATEMENT },
-    proforma: { notes: "" },
+    proforma: { notes: "", declaration: DEFAULT_PROFORMA_DECLARATION },
     foc: { enabled: false, reason: "SAMPLE", reasonOther: "", note: "" },
     items: [],
     charges: { freight: "", insurance: "", otherLabel: "", other: "", discount: "", vatRate: "", vat: "" },
