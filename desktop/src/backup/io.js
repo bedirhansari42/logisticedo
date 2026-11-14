@@ -7,7 +7,7 @@ export async function collectSnapshot() {
   for (const k of KV_KEYS) { const v = await store.kvGet(k); if (v !== undefined) kv[k] = v; }
   const local = {};
   for (const k of LOCAL_KEYS) { try { const v = localStorage.getItem(k); if (v != null) local[k] = v; } catch { /* yoksay */ } }
-  return { letterheads: await store.listLetterheads(), shipments: await store.listShipments(), kv, local };
+  return { letterheads: await store.listLetterheads(), shipments: await store.listShipments(), proformas: await store.listProformas(), kv, local };
 }
 
 export async function exportBackup() {
@@ -19,6 +19,7 @@ export async function applyPlan(plan) {
   let ok = true;
   for (const l of plan.letterheads) ok = (await store.saveLetterhead(l, { touch: false })) && ok;
   for (const s of plan.shipments) ok = (await store.saveShipment(s)) && ok;
+  for (const p of plan.proformas || []) ok = (await store.saveProforma(p)) && ok;
   if (!ok) throw new Error("storage");
   for (const [k, v] of Object.entries(plan.kv)) await store.kvSet(k, v);
   for (const [k, v] of Object.entries(plan.local)) { try { localStorage.setItem(k, v); } catch { /* yoksay */ } }

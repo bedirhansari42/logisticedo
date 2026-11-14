@@ -34,15 +34,16 @@ const COLS = {
   ]
 };
 
-function visibleCols(state, view) {
+/** invoiceOnly (proforma): tek belge para birimi var, kalem başına para birimi sütunu yok */
+function visibleCols(state, view, invoiceOnly) {
   const showCode = state.items.some((it) => it.code);
-  return COLS[view].filter(([f]) => f !== "code" || showCode);
+  return COLS[view].filter(([f]) => (f !== "code" || showCode) && !(invoiceOnly && f === "currency"));
 }
 
 export function ItemsTable({ ctx }) {
   const t = useT();
   const { state, auto, update, itemView: view, setItemView } = ctx;
-  const cols = visibleCols(state, view);
+  const cols = visibleCols(state, view, ctx.invoiceOnly);
   const focusLast = useRef(false);
   const cur = (state.meta.currency || "").trim().toUpperCase();
 
@@ -99,10 +100,12 @@ export function ItemsTable({ ctx }) {
   return (
     <>
       <div className="items-bar">
-        <div className="segmented" role="group">
-          <button type="button" aria-pressed={view === "invoice"} onClick={() => setItemView("invoice")}>{t("it.viewInvoice")}</button>
-          <button type="button" aria-pressed={view === "packing"} onClick={() => setItemView("packing")}>{t("it.viewPacking")}</button>
-        </div>
+        {ctx.invoiceOnly ? <span /> : (
+          <div className="segmented" role="group">
+            <button type="button" aria-pressed={view === "invoice"} onClick={() => setItemView("invoice")}>{t("it.viewInvoice")}</button>
+            <button type="button" aria-pressed={view === "packing"} onClick={() => setItemView("packing")}>{t("it.viewPacking")}</button>
+          </div>
+        )}
         <button className="btn btn--ghost btn--sm" type="button" onClick={add}><Icon name="plus" /><span>{t("it.add")}</span></button>
       </div>
       <div className="items-wrap">

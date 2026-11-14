@@ -84,7 +84,7 @@ export function newItem(p = {}) {
   };
 }
 
-const party = () => ({ name: "", address: "", taxId: "", contact: "" });
+const party = () => ({ name: "", address: "", taxId: "", person: "", contact: "" }); // person: karşıda irtibat kurulacak kişi (ad soyad)
 
 export function createEmptyState() {
   return {
@@ -107,6 +107,7 @@ export function createEmptyState() {
     trans: { to: "", loadAddress: "", loadDate: "", unloadAddress: "", deliveryDate: "", vehicleType: "", freight: "", paymentTerms: "", notes: "" },
     preAlert: { to: "", eta: "", docsExtra: "", notes: "" },
     origin: { certNo: "", statement: DEFAULT_ORIGIN_STATEMENT },
+    proforma: { notes: "" },
     items: [],
     charges: { freight: "", insurance: "", otherLabel: "", other: "", discount: "", vatRate: "", vat: "" },
     packing: { packageType: "CARTONS", marks: "", totalPackages: "", totalNet: "", totalGross: "", totalVolume: "" },
@@ -376,6 +377,17 @@ export function packagesInWords(n, type) {
 export function missingFields(s) {
   const miss = [];
   if (!s.meta.invoiceNo.trim()) miss.push("miss.invoiceNo");
+  if (!s.seller.name.trim()) miss.push("miss.seller");
+  if (!s.buyer.name.trim()) miss.push("miss.buyer");
+  if (!s.items.length) miss.push("miss.items");
+  if (!s.meta.currency.trim()) miss.push("miss.currency");
+  return miss;
+}
+
+/** Proforma için eksik alanlar (fatura no yerine proforma no aranır) */
+export function missingProforma(s) {
+  const miss = [];
+  if (!s.meta.proformaNo.trim()) miss.push("miss.proformaNo");
   if (!s.seller.name.trim()) miss.push("miss.seller");
   if (!s.buyer.name.trim()) miss.push("miss.buyer");
   if (!s.items.length) miss.push("miss.items");

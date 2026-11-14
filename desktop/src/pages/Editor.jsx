@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "@common";
 import { useT, getLang } from "../lib/i18n.js";
 import { useApp } from "../lib/app-context.jsx";
 import { go } from "../lib/router.js";
 import { useShipment } from "../lib/use-shipment.js";
 import { askConfirm } from "../lib/confirm.js";
-import { ALL_DOCS, DOC_GROUPS, DOC_ONLY, DOC_SECTIONS, DOC_TITLE, STATUSES, STEPS, applyProfileToState, docStatus } from "../lib/shipment-state.js";
+import { ALL_DOCS, DOC_GROUPS, DOC_ONLY, DOC_SECTIONS, DOC_TITLE, STATUSES, STEPS, docStatus } from "../lib/shipment-state.js";
 import { buildDownload, saveBlob } from "../lib/download.js";
 import { computeTotals, fmtUi } from "@engine/doc-model.js";
 import { FormSection } from "../components/form/Sections.jsx";
@@ -13,7 +13,8 @@ import { setField } from "../components/form/Field.jsx";
 import { Preview } from "../components/Preview.jsx";
 import { ParseReport } from "../components/ParseReport.jsx";
 import { Icon, Spinner } from "../components/Icons.jsx";
-import { applyCompanyToState, bankLabel, bankToState, pickBank } from "../lib/company.js";
+import { bankLabel } from "../lib/company.js";
+import { useRecordPickers } from "../lib/record-pickers.js";
 
 const STEP_KEYS = Object.keys(STEPS);
 const USES = { ci: [], si: ["items"], bl: ["items"], pl: ["general", "items"], pallet: ["items"], contract: ["general", "items", "bank"], bill: ["general", "items", "bank"] };
@@ -41,20 +42,8 @@ export function Editor({ id, step }) {
   const T = useMemo(() => (state ? computeTotals(state) : null), [state]);
   const company = sh.meta?.companyId ? app.getCompany(sh.meta.companyId) : null;
 
-  // Para birimi (ya da şirket) değişince, "otomatik" modda banka hesabı para birimine uyana döner.
-  // Sevkiyat açılırken çalışmaz: elle düzenlenmiş banka bilgisi ezilmesin.
-  const autoSeen = useRef(null);
-  const currency = state?.meta.currency;
-  useEffect(() => {
-    if (!state || !sh.meta) return;
-    const key = `${id}|${sh.meta.companyId}|${currency}|${sh.meta.bankAuto}|${sh.meta.bankId}`;
-    const first = autoSeen.current === null || !autoSeen.current.startsWith(`${id}|`);
-    const prev = autoSeen.current;
-    autoSeen.current = key;
-    if (first || prev === key || !company) return;
-    const b = sh.meta.bankAuto ? pickBank(company, currency) : company.banks.find((x) => x.id === sh.meta.bankId);
-    if (b) sh.update((d) => { d.bank = { ...d.bank, ...bankToState(b) }; });
-  }, [id, currency, company, sh.meta?.companyId, sh.meta?.bankAuto, sh.meta?.bankId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { onCompany, onBank, onLetterhead } = useRecordPickers({ sh, app, state, company, id, t });
+  const linkedPf = sh.meta?.proformaId ? app.getProforma(sh.meta.proformaId) : null;
 
   const ctx = useMemo(() => {
     if (!state) return null;
@@ -111,39 +100,6 @@ export function Editor({ id, step }) {
     }
   };
 
-  const onCompany = (value) => {
-    const c = value === "none" ? null : app.getCompany(value);
-    sh.updateMeta({ companyId: c ? c.id : null, bankId: null, bankAuto: true });
-    if (!c) return;
-    sh.update((d) => { applyCompanyToState(d, c, pickBank(c, d.meta.currency)); });
-    if (c.lhId && app.getLetterhead(c.lhId)) sh.updateMeta({ lhId: c.lhId });
-    app.setLastCompany(c.id);
-    toast(t("co.applied", { name: c.name }), "info");
-  };
-
-  const onBank = (value) => {
-    if (!company) return;
-    if (value === "auto") {
-      sh.updateMeta({ bankId: null, bankAuto: true });
-      const b = pickBank(company, state.meta.currency);
-      if (b) sh.update((d) => { d.bank = { ...d.bank, ...bankToState(b) }; });
-      return;
-    }
-    const b = company.banks.find((x) => x.id === value);
-    sh.updateMeta({ bankId: value, bankAuto: false });
-    if (b) sh.update((d) => { d.bank = { ...d.bank, ...bankToState(b) }; });
-  };
-
-  const onLetterhead = (value) => {
-    const next = value === "none" ? null : value;
-    sh.updateMeta({ lhId: next });
-    const rec = next ? app.getLetterhead(next) : null;
-    if (rec?.profile && !company) {
-      sh.update((d) => { applyProfileToState(d, rec.profile); });
-      toast(t("lh.profileApplied"), "info");
-    }
-  };
-
   const saveLabel = sh.saving === "saved" ? t("d.saved") : t("d.saving");
 
   const onStatus = async (value) => {
@@ -160,6 +116,9 @@ export function Editor({ id, step }) {
         <div className="ed-title">
           <h1 title={title}>{title}</h1>
           {state.buyer.name && <span className="muted">{state.buyer.name}</span>}
+          {sh.meta.proformaId && (linkedPf
+            ? <a className="link" href={`#/pf/${linkedPf.id}`}>{t("d.pf.linked", { no: linkedPf.summary?.proformaNo || t("d.pf.untitled") })}</a>
+            : <span className="muted">{t("d.pf.linkedDeleted")}</span>)}
           <label className="ed-select">
             <span className="visually-hidden">{t("d.col.status")}</span>
             <select className="select" value={sh.meta.status} onChange={(e) => onStatus(e.target.value)}>

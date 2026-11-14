@@ -7,6 +7,8 @@ import { newItem } from "@engine/doc-model.js";
 import { applyParsed, freshState, newShipmentRecord } from "../lib/shipment-state.js";
 import { applyCompanyToState, companyProfile, pickBank } from "../lib/company.js";
 import { Dropzone } from "../components/Dropzone.jsx";
+import { ProformaPicker } from "../components/ProformaPicker.jsx";
+import { shipmentFromProforma } from "../lib/proforma-records.js";
 import { ParseReport, buildParseSummary } from "../components/ParseReport.jsx";
 import { Icon } from "../components/Icons.jsx";
 
@@ -61,6 +63,12 @@ export function NewShipment() {
     go(`/s/${rec.id}`);
   };
 
+  const pickProforma = async (pf) => {
+    const rec = shipmentFromProforma(pf, { companyId: company ? company.id : undefined, lhId: lh ? lh.id : undefined }); // sayfadaki şirket/antet seçimi doluysa o kazanır
+    await app.saveShipment(rec);
+    go(`/s/${rec.id}`);
+  };
+
   return (
     <div className="page page--narrow">
       <header className="page-head">
@@ -104,6 +112,12 @@ export function NewShipment() {
           <span className="muted">{t("pf.or")}</span>
           <button className="btn btn--ghost btn--sm" type="button" onClick={blank}>{t("pf.blank")}</button>
         </div>
+      </section>
+
+      <section className="card-block pad">
+        <h2 className="block-title">{t("d.pf.pick.title")}</h2>
+        <p className="muted">{t("d.pf.pick.lead")}</p>
+        <ProformaPicker onPick={pickProforma} />
       </section>
     </div>
   );

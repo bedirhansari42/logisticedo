@@ -104,7 +104,7 @@ export function migrate(saved) {
   return base;
 }
 
-function suggestInvoiceNo(pi) {
+export function suggestInvoiceNo(pi) {
   const m = String(pi).match(/^(?:pro-?forma|pfi|pf|p\.?i\.?)[\s\-_/.#:]*(.+)$/i);
   return m ? `CI-${m[1]}` : `CI-${pi}`;
 }
@@ -226,9 +226,9 @@ export function docStatus(state, doc) {
   return JSON.stringify(state[key]) !== JSON.stringify(createEmptyState()[key]) ? "ready" : "empty";
 }
 
-export function newShipmentRecord({ state, auto = new Set(), lhId = null, parse = null, companyId = null }) {
+export function newShipmentRecord({ state, auto = new Set(), lhId = null, parse = null, companyId = null, proformaId = null }) {
   const now = Date.now();
-  return { id: uid(), status: "draft", lhId, companyId, bankId: null, bankAuto: true, createdAt: now, updatedAt: now, state, auto: [...auto], parse, summary: summarize(state) };
+  return { id: uid(), status: "draft", lhId, companyId, bankId: null, bankAuto: true, proformaId, createdAt: now, updatedAt: now, state, auto: [...auto], parse, summary: summarize(state) };
 }
 
 export const shipmentTitle = (rec) => rec.summary?.invoiceNo || rec.summary?.proformaNo || "";
@@ -240,5 +240,5 @@ export function duplicateRecord(rec) {
   state.meta.plNo = "";
   state.meta.invoiceDate = createEmptyState().meta.invoiceDate;
   const now = Date.now();
-  return { ...rec, id: uid(), status: "draft", createdAt: now, updatedAt: now, state, auto: [], parse: null, summary: summarize(state) };
+  return { ...rec, id: uid(), status: "draft", proformaId: null, createdAt: now, updatedAt: now, state, auto: [], parse: null, summary: summarize(state) };
 }

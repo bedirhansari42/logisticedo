@@ -29,7 +29,7 @@ test("large blobs encode (no call stack overflow)", async () => {
 test("backup has format, version and a summary", async () => {
   const b = await createBackup(snap({ shipments: [{ id: "s1" }, { id: "s2" }], letterheads: [{ id: "l" }], kv: { companies: [{ id: "c1" }] } }), { now: 1000, appVersion: "1.2.3" });
   assert.deepEqual([b.format, b.version, b.createdAt, b.appVersion], ["logisticedo-backup", BACKUP_VERSION, 1000, "1.2.3"]);
-  assert.deepEqual(validateBackup(b).summary, { shipments: 2, letterheads: 1, companies: 1, notes: 0 });
+  assert.deepEqual(validateBackup(b).summary, { shipments: 2, letterheads: 1, companies: 1, notes: 0, proformas: 0 });
 });
 
 test("invalid files are rejected with a message key", async () => {
@@ -109,4 +109,44 @@ test("with no local notes the file's board is restored as is", async () => {
   const file = board([["c1", "A"]], [card("k1", "c1", 20, "file")]);
   const plan = await planRestore(await roundtrip(await createBackup(snap({ kv: { notes: file } }))), snap());
   assert.deepEqual(plan.kv.notes, file);
+});
+
+// ---- Proformalar ----
+test("proformas are counted in the summary", async () => {
+  const b = await createBackup(snap({ proformas: [{ id: "p1" }, { id: "p2" }] }));
+  assert.equal(validateBackup(b).summary.proformas, 2);
+});
+
+test("an old backup without a proformas key still validates and restores", async () => {
+  const b = await roundtrip(await createBackup(snap({ shipments: [{ id: "s1" }] })));
+  delete b.data.proformas;
+  const v = validateBackup(b);
+  assert.equal(v.ok, true);
+  assert.equal(v.summary.proformas, 0);
+  const plan = await planRestore(b, snap());
+  assert.deepEqual(plan.proformas, []);
+  assert.equal(plan.shipments.length, 1);
+});
+
+test("a non-array proformas key is rejected", async () => {
+  const b = await roundtrip(await createBackup(snap()));
+  b.data.proformas = "x";
+  assert.equal(validateBackup(b).ok, false);
+});
+
+test("proformas merge by id: new added, newer updated, local-only kept", async () => {
+  const file = [{ id: "new", updatedAt: 1 }, { id: "newer-in-file", updatedAt: 20, v: "file" }, { id: "older-in-file", updatedAt: 5, v: "file" }];
+  const local = [{ id: "newer-in-file", updatedAt: 10, v: "local" }, { id: "older-in-file", updatedAt: 9, v: "local" }, { id: "only-local", updatedAt: 1 }];
+  const plan = await planRestore(await roundtrip(await createBackup(snap({ proformas: file }))), snap({ proformas: local }));
+  assert.deepEqual(plan.proformas.map((r) => [r.id, r.v]).sort(), [["new", undefined], ["newer-in-file", "file"]]);
+  assert.deepEqual(plan.counts.proformas, { added: 1, updated: 1, kept: 1 });
+});
+
+test("an imported proforma's original file blob survives the round trip", async () => {
+  const rec = { id: "p", updatedAt: 1, file: { name: "a.pdf", type: "application/pdf", size: 3, blob: new Blob([new Uint8Array([1, 2, 3])], { type: "application/pdf" }) } };
+  const plan = await planRestore(await roundtrip(await createBackup(snap({ proformas: [rec] }))), snap());
+  const got = plan.proformas[0].file;
+  assert.equal(got.blob instanceof Blob, true);
+  assert.equal(got.blob.size, 3);
+  assert.equal(got.name, "a.pdf");
 });

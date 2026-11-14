@@ -1,14 +1,16 @@
 /* Belge üretimi ve kaydetme (eski sayfadaki download() mantığı). */
 import { buildPdf } from "@engine/pdf-builder.js";
-import { buildXlsx } from "@engine/excel-builder.js";
+import { buildXlsx, buildProformaXlsx } from "@engine/excel-builder.js";
 import { safeFileName } from "@engine/doc-model.js";
 
 export async function buildDownload(kind, s, lh) {
   const base = safeFileName(s.meta.invoiceNo) || "document";
+  if (kind === "proforma-xlsx") return { blob: await buildProformaXlsx(s), name: `Proforma-Invoice_${safeFileName(s.meta.proformaNo) || "draft"}.xlsx` };
   if (kind === "xlsx") return { blob: await buildXlsx(s), name: `CI-PL_${base}.xlsx` };
   const bytes = await buildPdf(s, lh, kind);
   const names = {
     ci: `Commercial-Invoice_${base}.pdf`,
+    proforma: `Proforma-Invoice_${safeFileName(s.meta.proformaNo) || "draft"}.pdf`,
     pl: `Packing-List_${safeFileName(s.meta.plNo) || base}.pdf`,
     si: `Shipping-Instruction_${safeFileName(s.ship.siNo) || base}.pdf`,
     bl: `BL-Draft_${safeFileName(s.ship.blNo) || base}.pdf`,

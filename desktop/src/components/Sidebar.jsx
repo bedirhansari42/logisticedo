@@ -5,6 +5,7 @@ import { Brand, Icon } from "./Icons.jsx";
 
 const NAV = [
   ["dashboard", "/", "dashboard", "d.nav.dashboard"],
+  ["proformas", "/proformas", "proforma", "d.nav.proformas"],
   ["shipments", "/shipments", "shipments", "d.nav.shipments"],
   ["planner", "/planner", "planner", "d.nav.planner"],
   ["landed", "/landed", "landed", "d.nav.landed"],
@@ -20,10 +21,10 @@ const COMPANY_NAV = [
 export function Sidebar({ route }) {
   const t = useT();
   const lang = useLang();
-  const { shipments } = useApp();
+  const { shipments, proformas } = useApp();
   const theme = useTheme();
   const themeLabel = theme === "dark" ? t("d.nav.themeLight") : t("d.nav.themeDark");
-  const active = route.name === "editor" ? "shipments" : route.name;
+  const active = route.name === "editor" ? "shipments" : route.name === "proformaEditor" ? "proformas" : route.name;
   return (
     <aside className="side">
       <div className="side-top"><Brand /></div>
@@ -32,6 +33,7 @@ export function Sidebar({ route }) {
           <a key={key} href={`#${path}`} className={active === key ? "is-active" : ""} aria-current={active === key ? "page" : undefined} title={t(label)}>
             <Icon name={icon} /><span className="side-label">{t(label)}</span>
             {key === "shipments" && shipments.length > 0 && <em className="side-count">{shipments.length}</em>}
+            {key === "proformas" && proformas.length > 0 && <em className="side-count">{proformas.length}</em>}
           </a>
         ))}
         <p className="side-group side-label">{t("d.nav.company")}</p>

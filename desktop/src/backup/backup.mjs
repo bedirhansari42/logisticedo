@@ -38,7 +38,7 @@ function decode(v) {
   return v;
 }
 
-/** snapshot: { letterheads: [], shipments: [], kv: {anahtar: değer}, local: {anahtar: metin} } */
+/** snapshot: { letterheads: [], shipments: [], proformas: [], kv: {anahtar: değer}, local: {anahtar: metin} } */
 export async function createBackup(snapshot, { now = Date.now(), appVersion = "" } = {}) {
   return {
     format: BACKUP_FORMAT,
@@ -48,6 +48,7 @@ export async function createBackup(snapshot, { now = Date.now(), appVersion = ""
     data: {
       letterheads: await encode(snapshot.letterheads || []),
       shipments: await encode(snapshot.shipments || []),
+      proformas: await encode(snapshot.proformas || []),
       kv: await encode(snapshot.kv || {}),
       local: { ...(snapshot.local || {}) }
     }
@@ -58,8 +59,9 @@ export function validateBackup(b) {
   if (!isObj(b) || b.format !== BACKUP_FORMAT || typeof b.version !== "number" || !isObj(b.data)) return { ok: false, key: "d.bk.err.format" };
   const d = b.data;
   if (!Array.isArray(d.letterheads) || !Array.isArray(d.shipments) || !isObj(d.kv) || !isObj(d.local)) return { ok: false, key: "d.bk.err.format" };
+  if (d.proformas !== undefined && !Array.isArray(d.proformas)) return { ok: false, key: "d.bk.err.format" };
   if (b.version > BACKUP_VERSION) return { ok: false, key: "d.bk.err.newer" };
-  return { ok: true, summary: { shipments: d.shipments.length, letterheads: d.letterheads.length, companies: Array.isArray(d.kv.companies) ? d.kv.companies.length : 0, notes: Array.isArray(d.kv.notes?.cards) ? d.kv.notes.cards.length : 0 } };
+  return { ok: true, summary: { shipments: d.shipments.length, letterheads: d.letterheads.length, companies: Array.isArray(d.kv.companies) ? d.kv.companies.length : 0, notes: Array.isArray(d.kv.notes?.cards) ? d.kv.notes.cards.length : 0, proformas: (d.proformas || []).length } };
 }
 
 /** Kimliğe göre birleştirir: yerelde yoksa eklenir, dosyadaki daha yeniyse (updatedAt) güncellenir, aksi halde yerel kalır. Hiçbir şey silinmez. */
@@ -97,6 +99,7 @@ export async function planRestore(backup, current) {
   const d = decode(backup.data);
   const sh = mergeById(current.shipments || [], d.shipments);
   const lh = mergeById(current.letterheads || [], d.letterheads);
+  const pf = mergeById(current.proformas || [], d.proformas || []);
   const kv = {};
   let companies = { added: 0, updated: 0, kept: 0 };
   let notes = { added: 0, updated: 0, kept: 0 };
@@ -122,5 +125,5 @@ export async function planRestore(backup, current) {
   }
   const local = {};
   for (const key of LOCAL_KEYS) if (typeof d.local[key] === "string") local[key] = d.local[key];
-  return { shipments: sh.put, letterheads: lh.put, kv, local, counts: { shipments: sh.counts, letterheads: lh.counts, companies, notes } };
+  return { shipments: sh.put, proformas: pf.put, letterheads: lh.put, kv, local, counts: { shipments: sh.counts, proformas: pf.counts, letterheads: lh.counts, companies, notes } };
 }

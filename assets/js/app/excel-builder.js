@@ -63,7 +63,7 @@ function linesOf(text, charsPerLine) {
 }
 
 function partyText(p) {
-  return [p.name, p.address, p.taxId ? (/^(vat|tax|vkn|eori|inn|tin)/i.test(p.taxId) ? p.taxId : `Tax ID: ${p.taxId}`) : "", p.contact].filter(Boolean).join("\n") || "—";
+  return [p.name, p.address, p.taxId ? (/^(vat|tax|vkn|eori|inn|tin)/i.test(p.taxId) ? p.taxId : `Tax ID: ${p.taxId}`) : "", p.person ? `Attn: ${p.person}` : "", p.contact].filter(Boolean).join("\n") || "—";
 }
 
 /* İki yan yana taraf kutusu: etiket satırı + metin satırı */
@@ -107,15 +107,17 @@ function docPairs(s, kind) {
   const sh = s.shipment;
   const inc = [sh.incoterm, sh.incotermPlace].filter(Boolean).join(" ").toUpperCase();
   const pi = [s.meta.proformaNo, fmtDate(s.meta.proformaDate)].filter(Boolean).join(" / ");
-  const head = kind === "ci"
+  const head = kind === "pi"
+    ? [["PROFORMA NO.", s.meta.proformaNo], ["PROFORMA DATE", fmtDate(s.meta.proformaDate)]]
+    : kind === "ci"
     ? [["INVOICE NO.", s.meta.invoiceNo], ["INVOICE DATE", fmtDate(s.meta.invoiceDate)]]
     : [["PACKING LIST NO.", s.meta.plNo || s.meta.invoiceNo], ["DATE", fmtDate(s.meta.invoiceDate)], ["COMMERCIAL INVOICE", s.meta.invoiceNo]];
   return [
     ...head,
-    ["PROFORMA INVOICE", pi], ["ORDER REF.", s.meta.orderRef],
-    ...(kind === "ci" ? [["CURRENCY", (s.meta.currency || "").toUpperCase()]] : []),
+    ...(kind === "pi" ? [] : [["PROFORMA INVOICE", pi]]), ["ORDER REF.", s.meta.orderRef],
+    ...(kind !== "pl" ? [["CURRENCY", (s.meta.currency || "").toUpperCase()]] : []),
     ["TERMS OF DELIVERY", inc ? `${inc} (INCOTERMS® 2020)` : ""],
-    ...(kind === "ci" ? [["TERMS OF PAYMENT", sh.paymentTerms]] : []),
+    ...(kind !== "pl" ? [["TERMS OF PAYMENT", sh.paymentTerms]] : []),
     ["PORT / PLACE OF LOADING", sh.portLoading], ["PORT / PLACE OF DISCHARGE", sh.portDischarge],
     ["FINAL DESTINATION", sh.finalDestination], ["MODE OF TRANSPORT", sh.transportMode],
     ["COUNTRY OF ORIGIN", sh.countryOrigin], ["COUNTRY OF DESTINATION", sh.countryDestination],
@@ -130,11 +132,13 @@ function tableHeader(ws, r, titles) {
   return r + 1;
 }
 
-function signature(ws, r, last, s, withDecl) {
+/** opt.text: beyan yerine yazılacak sabit metin (proforma); opt.date: imza tarihi */
+function signature(ws, r, last, s, withDecl, opt = {}) {
   const L = colLetter(last);
-  if (withDecl && s.sign.showDeclaration && s.sign.declaration) {
-    put(ws, `A${r}:${L}${r}`, s.sign.declaration, { size: 8 });
-    ws.getRow(r).height = linesOf(s.sign.declaration, 110) * 11 + 6;
+  const text = opt.text || (withDecl && s.sign.showDeclaration ? s.sign.declaration : "");
+  if (text) {
+    put(ws, `A${r}:${L}${r}`, text, { size: 8 });
+    ws.getRow(r).height = linesOf(text, 110) * 11 + 6;
     r += 2;
   }
   r += 2;
@@ -143,15 +147,19 @@ function signature(ws, r, last, s, withDecl) {
   r++;
   const who = [s.sign.name, s.sign.title].filter(Boolean).join(", ");
   if (who) { put(ws, `A${r}:D${r}`, who, { bold: true }); r++; }
-  const where = [s.sign.place, fmtDate(s.meta.invoiceDate)].filter(Boolean).join(", ");
+  const where = [s.sign.place, fmtDate(opt.date || s.meta.invoiceDate)].filter(Boolean).join(", ");
   if (where) { put(ws, `A${r}:D${r}`, where, { size: 8 }); r++; }
   return r;
 }
 
 /* ================================================================ Commercial invoice */
 
-function invoiceSheet(wb, s) {
-  const ws = wb.addWorksheet("Commercial Invoice");
+const PROFORMA_NOTE = "This is a proforma invoice and not a demand for payment.";
+
+/** kind: "ci" ticari fatura, "pi" proforma (başlık, numara, beyan ve ağırlık özeti farklı) */
+function invoiceSheet(wb, s, kind = "ci") {
+  const isPi = kind === "pi";
+  const ws = wb.addWorksheet(isPi ? "Proforma Invoice" : "Commercial Invoice");
   const anyCode = s.items.some((it) => it.code);
   const cur = (s.meta.currency || "").toUpperCase();
   const T = computeTotals(s);
@@ -161,12 +169,12 @@ function invoiceSheet(wb, s) {
   setup(ws, [5, anyCode ? 13 : 0.1, 44, 12, 10, 8, 13, 17, ...extra.map((x) => (x === "CUR" ? 7 : 8))]);
   if (!anyCode) ws.getColumn(2).hidden = true;
 
-  put(ws, "A1:H1", "COMMERCIAL INVOICE", { bold: true, size: 16, v: "middle" });
+  put(ws, "A1:H1", isPi ? "PROFORMA INVOICE" : "COMMERCIAL INVOICE", { bold: true, size: 16, v: "middle" });
   ws.getRow(1).height = 28;
   let r = 3;
   r = partyRows(ws, r, s, 4, 8, 62, 50);
   r++;
-  r = infoPairs(ws, r, docPairs(s, "ci"), [[1, 2, 3, 4], [5, 6, 7, 8]]);
+  r = infoPairs(ws, r, docPairs(s, isPi ? "pi" : "ci"), [[1, 2, 3, 4], [5, 6, 7, 8]]);
   r++;
 
   r = tableHeader(ws, r, ["NO", "CODE", "DESCRIPTION OF GOODS", "HS CODE", "QTY", "UNIT", `UNIT PRICE${perLineCur ? "" : " " + cur}`, `AMOUNT${perLineCur ? "" : " " + cur}`, ...extra]);
@@ -223,7 +231,7 @@ function invoiceSheet(wb, s) {
     r += 2;
   }
 
-  if (s.options.showWeightsOnInvoice) {
+  if (s.options.showWeightsOnInvoice && !isPi) {
     r = infoPairs(ws, r, [
       ["TOTAL PACKAGES", T.packages ? packagesText(s, T) : ""],
       ["NET WEIGHT (KG)", T.net ? round(T.net, 2) : ""],
@@ -233,6 +241,13 @@ function invoiceSheet(wb, s) {
     r++;
   }
 
+  if (isPi && (s.proforma?.notes || "").trim()) {
+    const notes = s.proforma.notes.trim();
+    put(ws, `A${r}:B${r}`, "NOTES", { bold: true, size: 8, fill: GREY, border: true, color: "FF5F686D", v: "middle" });
+    put(ws, `C${r}:H${r}`, notes, { border: true, v: "middle" });
+    ws.getRow(r).height = Math.max(1, linesOf(notes, 90)) * 12 + 6;
+    r += 2;
+  }
   if (s.bank.show) {
     const bp = [["BANK", s.bank.bankName], ["BRANCH", s.bank.branch], ["BENEFICIARY", s.bank.accountName], ["IBAN", s.bank.iban], ["SWIFT / BIC", s.bank.swift], ["ACCOUNT NO.", s.bank.accountNo]].filter(([, v]) => v);
     if (bp.length) {
@@ -246,7 +261,7 @@ function invoiceSheet(wb, s) {
       r++;
     }
   }
-  signature(ws, r, 8, s, true);
+  signature(ws, r, 8, s, true, isPi ? { text: PROFORMA_NOTE, date: s.meta.proformaDate } : {});
   return ws;
 }
 
@@ -320,6 +335,18 @@ export async function buildXlsx(state) {
   wb.calcProperties.fullCalcOnLoad = true;
   invoiceSheet(wb, state);
   packingSheet(wb, state);
+  const buf = await wb.xlsx.writeBuffer();
+  return new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
+/** Proforma fatura: tek sayfa, antetsiz, formüllü */
+export async function buildProformaXlsx(state) {
+  const ExcelJS = await loadExcelJS();
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "logisticedo.com";
+  wb.created = new Date();
+  wb.calcProperties.fullCalcOnLoad = true;
+  invoiceSheet(wb, state, "pi");
   const buf = await wb.xlsx.writeBuffer();
   return new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }

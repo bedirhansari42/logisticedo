@@ -7,6 +7,8 @@ import { ConfirmHost } from "./components/ConfirmHost.jsx";
 import { Sidebar } from "./components/Sidebar.jsx";
 import { Dashboard } from "./pages/Dashboard.jsx";
 import { Shipments } from "./pages/Shipments.jsx";
+import { Proformas } from "./pages/Proformas.jsx";
+import { ProformaEditor } from "./pages/ProformaEditor.jsx";
 import { NewShipment } from "./pages/NewShipment.jsx";
 import { Editor } from "./pages/Editor.jsx";
 import { Letterheads } from "./pages/Letterheads.jsx";
@@ -19,6 +21,8 @@ import { Banks } from "./pages/Banks.jsx";
 
 function Pages({ route }) {
   switch (route.name) {
+    case "proformas": return <Proformas />;
+    case "proformaEditor": return <ProformaEditor key={route.id} id={route.id} step={route.step} />;
     case "shipments": return <Shipments />;
     case "new": return <NewShipment />;
     case "editor": return <Editor key={route.id} id={route.id} step={route.step} />;
@@ -50,7 +54,7 @@ export default function App() {
 
   return (
     <AppProvider>
-      <div className={`shell${route.name === "editor" ? " shell--compact" : ""}`}>
+      <div className={`shell${route.name === "editor" || route.name === "proformaEditor" ? " shell--compact" : ""}`}>
         <Sidebar route={route} />
         <main className="main"><Pages route={route} /></main>
       </div>

@@ -34,7 +34,7 @@ function useRerenderOnResize(stageRef, pagesRef, bytesRef) {
 }
 
 /** Canlı PDF önizleme. Önizleme, indirilen dosyanın kendisidir. */
-export function Preview({ state, lh, doc, onDownload, busyKey }) {
+export function Preview({ state, lh, doc, onDownload, busyKey, xlsxKind = "xlsx", missing }) {
   const t = useT();
   const pagesRef = useRef(null);
   const stageRef = useRef(null);
@@ -79,7 +79,7 @@ export function Preview({ state, lh, doc, onDownload, busyKey }) {
 
   useRerenderOnResize(stageRef, pagesRef, bytesRef);
 
-  const miss = missingFields(state);
+  const miss = missing ?? missingFields(state);
   const title = t(`pv.${doc}`);
   const stop = (e) => e.preventDefault();
 
@@ -97,7 +97,7 @@ export function Preview({ state, lh, doc, onDownload, busyKey }) {
             <button className="icon-btn icon-btn--plain" type="button" aria-haspopup="menu" aria-expanded={menu} title={t("pv.dlMore")} aria-label={t("pv.dlMore")} onClick={(e) => { e.stopPropagation(); setMenu((m) => !m); }}><Icon name="more" /></button>
             {menu && (
               <div className="pv-menu" role="menu">
-                <button type="button" role="menuitem" onClick={() => { setMenu(false); onDownload("xlsx"); }}>{t("pv.dlXlsx")}</button>
+                <button type="button" role="menuitem" onClick={() => { setMenu(false); onDownload(xlsxKind); }}>{t("pv.dlXlsx")}</button>
               </div>
             )}
           </div>

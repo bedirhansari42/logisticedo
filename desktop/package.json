@@ -18,6 +18,7 @@
     "dist": "npm run dist:mac && npm run dist:win",
     "test:planner": "node --test src/planner/*.test.mjs",
     "test:landed": "node --test src/landed/*.test.mjs",
+    "test:proforma": "node --test src/proforma/*.test.mjs",
     "test:backup": "node --test src/backup/*.test.mjs",
     "test:notes": "node --test src/notes/*.test.mjs"
   },

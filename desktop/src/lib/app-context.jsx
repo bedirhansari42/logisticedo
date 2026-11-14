@@ -13,6 +13,7 @@ export function AppProvider({ children }) {
   const [letterheads, setLetterheads] = useState([]);
   const [defaultLhId, setDefaultLhId] = useState("none");
   const [shipments, setShipments] = useState([]);
+  const [proformas, setProformas] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [lastCompanyId, setLastCompanyId] = useState("none");
 
@@ -23,6 +24,7 @@ export function AppProvider({ children }) {
       const lhs = await store.listLetterheads();
       const id = await store.kvGet("lhId");
       const ships = await store.listShipments();
+      const pfs = await store.listProformas();
       const cos = (await store.kvGet("companies")) || [];
       const coId = await store.kvGet("companyId");
       if (!alive) return;
@@ -30,6 +32,7 @@ export function AppProvider({ children }) {
       setLetterheads(lhs);
       if (id && lhs.some((l) => l.id === id)) setDefaultLhId(id);
       setShipments(ships);
+      setProformas(pfs);
       setCompanies(Array.isArray(cos) ? cos : []);
       if (coId && Array.isArray(cos) && cos.some((c) => c.id === coId)) setLastCompanyId(coId);
       setReady(true);
@@ -81,13 +84,26 @@ export function AppProvider({ children }) {
     setShipments((list) => list.filter((s) => s.id !== id));
   }, []);
 
+  const saveProforma = useCallback(async (rec) => {
+    const ok = await store.saveProforma(rec);
+    setProformas((list) => [rec, ...list.filter((p) => p.id !== rec.id)].sort(byUpdated));
+    return ok;
+  }, []);
+
+  const deleteProforma = useCallback(async (id) => {
+    await store.deleteProforma(id);
+    setProformas((list) => list.filter((p) => p.id !== id));
+  }, []);
+
   const value = useMemo(() => ({
     ready, persistent, letterheads, defaultLhId, setDefaultLh, saveLetterhead, deleteLetterhead,
     shipments, saveShipment, deleteShipment,
+    proformas, saveProforma, deleteProforma,
+    getProforma: (id) => proformas.find((p) => p.id === id) || null,
     companies, lastCompanyId, setLastCompany, saveCompany, deleteCompany,
     getCompany: (id) => companies.find((c) => c.id === id) || null,
     getLetterhead: (id) => letterheads.find((l) => l.id === id) || null
-  }), [ready, persistent, letterheads, defaultLhId, shipments, companies, lastCompanyId, setDefaultLh, saveLetterhead, deleteLetterhead, saveShipment, deleteShipment, setLastCompany, saveCompany, deleteCompany]);
+  }), [ready, persistent, letterheads, defaultLhId, shipments, proformas, companies, lastCompanyId, setDefaultLh, saveLetterhead, deleteLetterhead, saveShipment, deleteShipment, saveProforma, deleteProforma, setLastCompany, saveCompany, deleteCompany]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

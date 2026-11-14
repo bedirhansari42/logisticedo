@@ -1,9 +1,10 @@
 /* Tarayıcı içi kalıcı depo (IndexedDB). Antetler ve taslak burada tutulur; hiçbir şey sunucuya gitmez. */
 
 const DB_NAME = "logisticedo";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 let dbPromise = null;
 let memoryFallback = null; // IndexedDB kullanılamıyorsa oturum belleği
+const fallback = () => memoryFallback || { letterheads: new Map(), kv: new Map(), shipments: new Map(), proformas: new Map() };
 
 function open() {
   if (dbPromise) return dbPromise;
@@ -16,12 +17,13 @@ function open() {
       if (!db.objectStoreNames.contains("letterheads")) db.createObjectStore("letterheads", { keyPath: "id" });
       if (!db.objectStoreNames.contains("kv")) db.createObjectStore("kv");
       if (!db.objectStoreNames.contains("shipments")) db.createObjectStore("shipments", { keyPath: "id" });
+      if (!db.objectStoreNames.contains("proformas")) db.createObjectStore("proformas", { keyPath: "id" });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error || new Error("IndexedDB açılamadı"));
     req.onblocked = () => reject(new Error("IndexedDB engellendi"));
   }).catch((e) => {
-    memoryFallback = memoryFallback || { letterheads: new Map(), kv: new Map(), shipments: new Map() };
+    memoryFallback = fallback();
     throw e;
   });
   return dbPromise;
@@ -78,7 +80,7 @@ export async function saveLetterhead(rec, { touch = true } = {}) {
     await tx("letterheads", "readwrite", (s) => reqP(s.put(rec)));
     return true;
   } catch {
-    memoryFallback = memoryFallback || { letterheads: new Map(), kv: new Map(), shipments: new Map() };
+    memoryFallback = fallback();
     memoryFallback.letterheads.set(rec.id, rec);
     return false;
   }
@@ -104,7 +106,7 @@ export async function kvSet(key, value) {
   try {
     await tx("kv", "readwrite", (s) => reqP(s.put(value, key)));
   } catch {
-    memoryFallback = memoryFallback || { letterheads: new Map(), kv: new Map(), shipments: new Map() };
+    memoryFallback = fallback();
     memoryFallback.kv.set(key, value);
   }
 }
@@ -142,7 +144,7 @@ export async function saveShipment(rec) {
     await tx("shipments", "readwrite", (s) => reqP(s.put(rec)));
     return true;
   } catch {
-    memoryFallback = memoryFallback || { letterheads: new Map(), kv: new Map(), shipments: new Map() };
+    memoryFallback = fallback();
     (memoryFallback.shipments = memoryFallback.shipments || new Map()).set(rec.id, rec);
     return false;
   }
@@ -153,5 +155,44 @@ export async function deleteShipment(id) {
     await tx("shipments", "readwrite", (s) => reqP(s.delete(id)));
   } catch {
     memoryFallback?.shipments?.delete(id);
+  }
+}
+
+/* --- Proforma faturalar ------------------------------------------------------------------- */
+
+export async function listProformas() {
+  try {
+    const all = await tx("proformas", "readonly", (s) => reqP(s.getAll()));
+    return (all || []).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  } catch {
+    return memoryFallback?.proformas ? [...memoryFallback.proformas.values()] : [];
+  }
+}
+
+export async function getProforma(id) {
+  if (!id) return null;
+  try {
+    return (await tx("proformas", "readonly", (s) => reqP(s.get(id)))) || null;
+  } catch {
+    return memoryFallback?.proformas?.get(id) || null;
+  }
+}
+
+export async function saveProforma(rec) {
+  try {
+    await tx("proformas", "readwrite", (s) => reqP(s.put(rec)));
+    return true;
+  } catch {
+    memoryFallback = fallback();
+    (memoryFallback.proformas = memoryFallback.proformas || new Map()).set(rec.id, rec);
+    return false;
+  }
+}
+
+export async function deleteProforma(id) {
+  try {
+    await tx("proformas", "readwrite", (s) => reqP(s.delete(id)));
+  } catch {
+    memoryFallback?.proformas?.delete(id);
   }
 }

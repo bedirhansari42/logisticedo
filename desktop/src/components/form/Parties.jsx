@@ -2,7 +2,7 @@ import { useT } from "../../lib/i18n.js";
 import { getPath } from "../../lib/shipment-state.js";
 import { PlainField, setField } from "./Field.jsx";
 
-function Party({ ctx, prefix, legendKey, taxId = true, toggle }) {
+function Party({ ctx, prefix, legendKey, taxId = true, person = false, toggle }) {
   const t = useT();
   const shown = toggle ? (toggle.invert ? !getPath(ctx.state, toggle.bind) : !!getPath(ctx.state, toggle.bind)) : true;
   return (
@@ -18,6 +18,7 @@ function Party({ ctx, prefix, legendKey, taxId = true, toggle }) {
         <div className="party-fields">
           <PlainField ctx={ctx} bind={`${prefix}.name`} labelKey="f.name" />
           <PlainField ctx={ctx} bind={`${prefix}.address`} labelKey="f.address" textarea rows={3} />
+          {person && <PlainField ctx={ctx} bind={`${prefix}.person`} labelKey="f.person" />}
           {taxId ? (
             <div className="fgrid fgrid--2">
               <PlainField ctx={ctx} bind={`${prefix}.taxId`} labelKey="f.taxId" />
@@ -35,11 +36,11 @@ export function Parties({ ctx }) {
     <>
       <div className="party-grid">
         <Party ctx={ctx} prefix="seller" legendKey="f.seller" />
-        <Party ctx={ctx} prefix="buyer" legendKey="f.buyer" />
+        <Party ctx={ctx} prefix="buyer" legendKey="f.buyer" person />
       </div>
       <div className="party-grid">
         <Party ctx={ctx} prefix="consignee" legendKey="f.consignee" toggle={{ bind: "consignee.same", labelKey: "f.sameAsBuyer", invert: true }} />
-        <Party ctx={ctx} prefix="notify" legendKey="f.notify" taxId={false} toggle={{ bind: "notify.enabled", labelKey: "f.addNotify" }} />
+        <Party ctx={ctx} prefix="notify" legendKey="f.notify" taxId={false} person toggle={{ bind: "notify.enabled", labelKey: "f.addNotify" }} />
       </div>
     </>
   );

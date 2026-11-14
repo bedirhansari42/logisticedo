@@ -469,6 +469,7 @@ function partyBlock(doc, label, p) {
   if (p.name) lines.push({ text: p.name, font: "s", size: S.name, color: C.ink });
   if (p.address) lines.push({ text: p.address, size: S.body });
   if (p.taxId) lines.push({ text: /^(vat|tax|vkn|eori|inn|tin|ust|v\.?d)/i.test(p.taxId) ? p.taxId : `Tax ID: ${p.taxId}`, size: S.small, color: C.muted });
+  if (p.person) lines.push({ text: `Attn: ${p.person}`, size: S.body });
   if (p.contact) lines.push({ text: p.contact, size: S.small, color: C.muted });
   if (!lines.length) lines.push({ text: "—", color: C.muted });
   return doc.cell({ label, lines, minH: 58 });
@@ -539,19 +540,25 @@ function signInfo(s, dateIso) {
 
 /* ================================================================== Commercial invoice */
 
-function renderInvoice(ctx, s) {
+const PROFORMA_NOTE = "This is a proforma invoice and not a demand for payment.";
+
+/** kind: "ci" ticari fatura, "pi" proforma fatura (aynı yerleşim; başlık, numara, beyan ve ağırlık özeti farklı) */
+function renderInvoice(ctx, s, kind = "ci") {
+  const isPi = kind === "pi";
   const T = computeTotals(s);
   const cur = (s.meta.currency || "").toUpperCase();
-  const d = new Doc(ctx, "COMMERCIAL INVOICE", s.meta.invoiceNo || "—");
+  const title = isPi ? "PROFORMA INVOICE" : "COMMERCIAL INVOICE";
+  const docNo = isPi ? s.meta.proformaNo : s.meta.invoiceNo;
+  const docDate = isPi ? s.meta.proformaDate : s.meta.invoiceDate;
+  const d = new Doc(ctx, title, docNo || "—");
   if (!ctx.hasLetterhead) d.plainHeader(s.seller);
-  d.docTitle("COMMERCIAL INVOICE");
+  d.docTitle(title);
 
-  const pairs = [
-    ["Invoice No.", s.meta.invoiceNo, true],
-    ["Invoice Date", fmtDate(s.meta.invoiceDate)]
-  ];
+  const pairs = isPi
+    ? [["Proforma No.", s.meta.proformaNo, true], ["Proforma Date", fmtDate(s.meta.proformaDate)]]
+    : [["Invoice No.", s.meta.invoiceNo, true], ["Invoice Date", fmtDate(s.meta.invoiceDate)]];
   const pi = [s.meta.proformaNo, fmtDate(s.meta.proformaDate)].filter(Boolean).join(" / ");
-  if (pi) pairs.push(["Proforma Invoice", pi]);
+  if (pi && !isPi) pairs.push(["Proforma Invoice", pi]);
   if (s.meta.orderRef) pairs.push(["Order Ref.", s.meta.orderRef]);
   if (cur) pairs.push(["Currency", cur]);
   const inc = incotermText(s);
@@ -606,7 +613,7 @@ function renderInvoice(ctx, s) {
   const tw = Math.max(176, lastCols.reduce((a, c) => a + c.w, 0));
   const rowH = S.body * LH + 6;
   const totalH = lines.length * rowH + (S.body + 1) * LH + 9;
-  const wp = s.options.showWeightsOnInvoice ? weightPairs(T, s) : [];
+  const wp = s.options.showWeightsOnInvoice && !isPi ? weightPairs(T, s) : [];
   const wBlock = wp.length ? d.kv("Packing summary", wp, 68) : null;
   const wW = d.w - tw - 10;
   const wm = wBlock ? wBlock.measure(wW) : { h: 0 };
@@ -637,8 +644,12 @@ function renderInvoice(ctx, s) {
 
   /* Banka + beyan/imza */
   d.gap(6);
+  if (isPi && (s.proforma?.notes || "").trim()) {
+    d.row([d.cell({ label: "Notes", lines: [{ text: s.proforma.notes.trim(), font: "r", size: S.body, color: C.ink }] })], [1]);
+    d.gap(6);
+  }
   const bp = s.bank.show ? bankPairs(s.bank) : [];
-  const sign = d.sign(s.sign.showDeclaration ? s.sign.declaration : "", signInfo(s, s.meta.invoiceDate));
+  const sign = d.sign(isPi ? PROFORMA_NOTE : s.sign.showDeclaration ? s.sign.declaration : "", signInfo(s, docDate));
   if (bp.length) d.row([d.kv("Bank details", bp, 62), sign], [0.5, 0.5]);
   else d.row([sign], [0.5]);
 
@@ -1555,14 +1566,15 @@ function drawLabel(d, s, L, to, x, y, w, h, k, lb) {
 /* ================================================================== Dışa açık */
 
 /** which: 'ci' | 'pl' | 'both' | 'si' | 'bl' | 'origin' | 'all' → Uint8Array */
-const TITLES = { ci: "Commercial Invoice", pl: "Packing List", both: "Commercial Invoice & Packing List", si: "Shipping Instruction", bl: "Bill of Lading Draft", origin: "Declaration of Origin", loading: "Loading Instruction", coo: "Certificate of Origin Request", eur1: "EUR.1 Request", ins: "Insurance Request", trans: "Transport Order", prealert: "Pre-alert", pallet: "Packing List by Pallet", contract: "Sales Contract", bill: "Bill of Exchange", labels: "Labels", cmr: "CMR Consignment Note", poa: "Customs Power of Attorney", all: "Shipping Documents" };
+const TITLES = { ci: "Commercial Invoice", pl: "Packing List", both: "Commercial Invoice & Packing List", proforma: "Proforma Invoice", si: "Shipping Instruction", bl: "Bill of Lading Draft", origin: "Declaration of Origin", loading: "Loading Instruction", coo: "Certificate of Origin Request", eur1: "EUR.1 Request", ins: "Insurance Request", trans: "Transport Order", prealert: "Pre-alert", pallet: "Packing List by Pallet", contract: "Sales Contract", bill: "Bill of Exchange", labels: "Labels", cmr: "CMR Consignment Note", poa: "Customs Power of Attorney", all: "Shipping Documents" };
 
 export async function buildPdf(state, letterhead, which = "ci") {
   const ctx = await createContext(state, letterhead);
-  ctx.pdf.setTitle(`${TITLES[which] || TITLES.ci} ${state.meta.invoiceNo || ""}`.trim());
+  ctx.pdf.setTitle(`${TITLES[which] || TITLES.ci} ${(which === "proforma" ? state.meta.proformaNo : state.meta.invoiceNo) || ""}`.trim());
   if (state.seller.name) ctx.pdf.setAuthor(state.seller.name);
   const all = which === "all";
   if (which === "ci" || which === "both" || all) renderInvoice(ctx, state);
+  if (which === "proforma") renderInvoice(ctx, state, "pi"); // "tüm belgeler"e girmez
   if (which === "pl" || which === "both" || all) renderPacking(ctx, state);
   if (which === "si" || all) renderTransport(ctx, state, "si");
   if (which === "bl" || all) renderTransport(ctx, state, "bl");
