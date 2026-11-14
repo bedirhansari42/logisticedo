@@ -78,7 +78,7 @@ export function Settings() {
         <p className="muted">{t("d.set.languageText")}</p>
         <div className="segmented" role="group">
           <button type="button" aria-pressed={lang === "tr"} onClick={() => setLang("tr")}>Türkçe</button>
-          <button type="button" aria-pressed={lang === "en"} onClick={() => setLang("en")}>English</button>
+          <button type="button" aria-pressed={lang === "en"} onClick={() => setLang("en")}>Englısh</button>
         </div>
       </section>
       <section className="card-block pad">

@@ -51,8 +51,8 @@ export function Sidebar({ route }) {
           <Icon name="settings" /><span className="side-label">{t("d.nav.settings")}</span>
         </a>
         <div className="lang-switch side-lang" role="group" aria-label="Dil / Language">
-          <button type="button" aria-pressed={lang === "tr"} onClick={() => setLang("tr")}>TR</button>
-          <button type="button" aria-pressed={lang === "en"} onClick={() => setLang("en")}>EN</button>
+          <button type="button" data-lang="tr" aria-pressed={lang === "tr"} onClick={() => setLang("tr")}>TR</button>
+          <button type="button" data-lang="en" aria-pressed={lang === "en"} onClick={() => setLang("en")}>EN</button>
         </div>
         <p className="side-local side-label"><Icon name="shield" />{t("d.nav.local")}</p>
       </div>
