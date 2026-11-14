@@ -65,7 +65,7 @@ export const EXTRA = {
     "d.nav.settings": "Ayarlar",
     "d.nav.local": "Veriler bu bilgisayarda kalır",
     "d.nav.planner": "Konteyner planı",
-    "d.nav.landed": "Maliyet",
+    "d.nav.landed": "İthalat Maliyeti",
     "d.nav.themeLight": "Açık tema",
     "d.nav.themeDark": "Koyu tema",
     "d.nav.notes": "Notlar",
