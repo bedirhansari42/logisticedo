@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { toast } from "@common";
 import { useT } from "../lib/i18n.js";
+import { askConfirm } from "../lib/confirm.js";
 import { useApp } from "../lib/app-context.jsx";
-import { STATUSES, duplicateRecord, shipmentTitle } from "../lib/shipment-state.js";
+import { STATUSES, duplicateRecord } from "../lib/shipment-state.js";
 import { ShipmentTable } from "../components/ShipmentTable.jsx";
 import { Icon } from "../components/Icons.jsx";
 
@@ -23,7 +24,8 @@ export function Shipments() {
   }, [shipments, q, status]);
 
   const onDelete = async (r) => {
-    if (!window.confirm(t("d.confirmDelete", { name: shipmentTitle(r) || t("d.untitled") }))) return;
+    const ok = await askConfirm({ title: t("d.confirm.delTitle"), message: t("d.confirmDelete", { name: r.summary?.invoiceNo || t("d.untitled") }), confirmLabel: t("d.act.del"), requireText: [r.summary?.invoiceNo] });
+    if (!ok) return;
     await deleteShipment(r.id);
     toast(t("d.deleted"));
   };

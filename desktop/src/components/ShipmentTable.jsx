@@ -30,7 +30,7 @@ export function ShipmentTable({ rows, onDuplicate, onDelete, compact = false }) 
             const open = () => go(`/s/${r.id}`);
             return (
               <tr key={r.id} tabIndex={0} onClick={open} onKeyDown={(e) => { if (e.key === "Enter") open(); }}>
-                <td className="clip"><strong>{shipmentTitle(r) || t("d.untitled")}</strong>{s.proformaNo && <span className="sub">{s.proformaNo}</span>}</td>
+                <td className="clip"><strong>{shipmentTitle(r) || t("d.untitled")}</strong>{s.foc && <span className="foc-badge">{t("d.foc.badge")}</span>}{s.proformaNo && <span className="sub">{s.proformaNo}</span>}</td>
                 <td className="clip" title={s.buyer || undefined}>{s.buyer || "—"}</td>
                 {!compact && <td className="clip">{s.from || s.to ? `${s.from || "?"} → ${s.to || "?"}` : "—"}{s.incoterm && <span className="sub">{s.incoterm}</span>}</td>}
                 <td className="num">{money(s.total, s.currency)}</td>

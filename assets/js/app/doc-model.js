@@ -108,6 +108,7 @@ export function createEmptyState() {
     preAlert: { to: "", eta: "", docsExtra: "", notes: "" },
     origin: { certNo: "", statement: DEFAULT_ORIGIN_STATEMENT },
     proforma: { notes: "" },
+    foc: { enabled: false, reason: "SAMPLE", reasonOther: "", note: "" },
     items: [],
     charges: { freight: "", insurance: "", otherLabel: "", other: "", discount: "", vatRate: "", vat: "" },
     packing: { packageType: "CARTONS", marks: "", totalPackages: "", totalNet: "", totalGross: "", totalVolume: "" },

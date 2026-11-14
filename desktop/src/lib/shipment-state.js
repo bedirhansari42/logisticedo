@@ -5,7 +5,7 @@ export const STATUSES = ["draft", "ready", "transit", "delivered"];
 
 /** Belge seçici grupları (eski sayfadaki gruplarla aynı) */
 export const DOC_GROUPS = [
-  { key: "commercial", titleKey: "d.grp.commercial", docs: ["ci", "pl", "pallet", "contract", "bill"] },
+  { key: "commercial", titleKey: "d.grp.commercial", docs: ["ci", "foc", "pl", "pallet", "contract", "bill"] },
   { key: "shipment", titleKey: "d.grp.shipment", docs: ["si", "bl", "prealert", "cmr", "labels"] },
   { key: "instructions", titleKey: "d.grp.instructions", docs: ["loading", "trans", "ins"] },
   { key: "origin", titleKey: "d.grp.origin", docs: ["origin", "coo", "eur1", "poa"] }
@@ -14,7 +14,7 @@ export const ALL_DOCS = DOC_GROUPS.flatMap((g) => g.docs);
 
 /** Her belgenin forma ait bölümleri (form-schema.json harfleri) */
 export const DOC_SECTIONS = {
-  ci: ["A", "B", "C", "D", "E", "F", "G", "H"], pl: ["A", "F"], pallet: ["O"], contract: ["R"], bill: ["S"],
+  ci: ["A", "B", "C", "D", "E", "F", "G", "H"], foc: ["A", "B", "C", "D", "F", "H"], pl: ["A", "F"], pallet: ["O"], contract: ["R"], bill: ["S"],
   si: ["A", "B", "C", "F", "I"], bl: ["A", "B", "C", "F", "I"], prealert: ["N"], cmr: ["P"], labels: ["T"],
   loading: ["K"], trans: ["M"], ins: ["L"],
   origin: ["J"], coo: ["K"], eur1: ["K"], poa: ["Q"]
@@ -32,6 +32,12 @@ const SHIP_COMMON = "ship.bookingNo ship.carrier ship.placeReceipt ship.placeDel
 export const DOC_ONLY = {
   si: { ...TRANSPORT_ONLY, I: list(`ship.siNo ship.forwarder ${SHIP_COMMON} ship.instructions`) },
   bl: { ...TRANSPORT_ONLY, I: list(`ship.blNo ${SHIP_COMMON}`) },
+  foc: {
+    A: list("meta.invoiceNo meta.invoiceDate meta.orderRef meta.currency"),
+    C: list("shipment.incoterm shipment.incotermPlace"),
+    F: list("f.totalsTitle packing.totalPackages packing.totalNet packing.totalGross packing.totalVolume options.showWeightsOnInvoice"),
+    H: list("sign.name sign.title sign.place")
+  },
   ci: {
     C: list("shipment.incoterm shipment.incotermPlace"),
     F: list("f.totalsTitle packing.totalPackages packing.totalNet packing.totalGross packing.totalVolume options.showWeightsOnInvoice")
@@ -208,6 +214,7 @@ export function summarize(state) {
     to: (state.shipment.portDischarge || state.shipment.finalDestination).trim(),
     mode: state.shipment.transportMode,
     shipDate: state.shipment.shipmentDate,
+    foc: !!state.foc?.enabled,
     missing: missingFields(state)
   };
 }
@@ -215,7 +222,7 @@ export function summarize(state) {
 /** Belgenin hazırlık durumu: 'ready' | 'partial' | 'empty' */
 export function docStatus(state, doc) {
   const hasItems = state.items.some((it) => it.description || it.qty);
-  if (doc === "ci" || doc === "pl") {
+  if (doc === "ci" || doc === "foc" || doc === "pl") {
     if (!hasItems && !state.buyer.name && !state.seller.name) return "empty";
     return missingFields(state).length ? "partial" : "ready";
   }

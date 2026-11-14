@@ -51,7 +51,8 @@ export function Dashboard() {
       return { key: monthKey(d.getTime()), label: new Intl.DateTimeFormat(locale, { month: "short" }).format(d), n: 0 };
     });
     for (const x of shipments) { const m = months.find((mm) => mm.key === monthKey(x.createdAt)); if (m) m.n++; }
-    return { total: shipments.length, active: count("draft") + count("ready"), transit: count("transit"), month: month.length, value, months };
+    const foc = shipments.filter((x) => x.summary?.foc ?? x.state?.foc?.enabled).length; // ücretsiz (Free of Charge) sevkiyat sayısı
+    return { total: shipments.length, foc, active: count("draft") + count("ready"), transit: count("transit"), month: month.length, value, months };
   }, [shipments, locale]);
 
   const attention = shipments.filter((x) => (x.status === "draft" || x.status === "ready") && x.summary?.missing?.length).slice(0, 5);
@@ -89,6 +90,7 @@ export function Dashboard() {
             <div className="stat"><span className="stat-k">{t("d.stat.total")}</span><strong className="stat-v">{stats.total}</strong></div>
             <div className="stat"><span className="stat-k">{t("d.stat.active")}</span><strong className="stat-v">{stats.active}</strong><span className="stat-s">{t("d.stat.activeSub")}</span></div>
             <div className="stat"><span className="stat-k">{t("d.stat.transit")}</span><strong className="stat-v">{stats.transit}</strong></div>
+            <div className="stat"><span className="stat-k">{t("d.stat.foc")}</span><strong className="stat-v">{stats.foc}</strong></div>
             <div className="stat"><span className="stat-k">{t("d.stat.month")}</span><strong className="stat-v">{stats.month}</strong>{stats.value.length > 0 && <span className="stat-s">{stats.value.join(" · ")}</span>}</div>
           </section>
 

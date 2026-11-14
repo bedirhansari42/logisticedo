@@ -3,6 +3,7 @@ import { toast } from "@common";
 import { ICONS } from "@common";
 import { useT, useLang } from "../lib/i18n.js";
 import { useApp } from "../lib/app-context.jsx";
+import { askConfirm } from "../lib/confirm.js";
 import { go } from "../lib/router.js";
 import { createEmptyState, newItem } from "@engine/doc-model.js";
 import { freshState } from "../lib/shipment-state.js";
@@ -88,7 +89,8 @@ export function Proformas() {
   };
 
   const onDelete = async (r) => {
-    if (!window.confirm(t("d.pf.confirmDelete", { name: proformaTitle(r) || t("d.pf.untitled") }))) return;
+    const ok = await askConfirm({ title: t("d.confirm.delTitle"), message: t("d.pf.confirmDelete", { name: proformaTitle(r) || t("d.pf.untitled") }), confirmLabel: t("d.act.del"), requireText: [r.summary?.proformaNo] });
+    if (!ok) return;
     await app.deleteProforma(r.id);
     toast(t("d.pf.deleted"));
   };

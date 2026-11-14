@@ -1,6 +1,7 @@
 /* Commercial invoice ve packing list PDF'leri (pdf-lib). Antet her sayfanın arka planına çizilir.
    Koordinatlar yukarıdan aşağıya (yTop) tutulur, çizimde pdf-lib düzlemine çevrilir. */
 import { loadPdfLib, loadDocFonts } from "./loader.js";
+import { focReasonText } from "./foc.js";
 import {
   computeTotals, itemCurrency, itemVatRate, num, lineAmount, fmtMoney, fmtPrice, fmtQty, fmtWeight, fmtVolume, fmtDate,
   amountInWords, packagesInWords, itemPackageType, packagesText, DEFAULT_ORIGIN_STATEMENT, DEFAULT_ORIGIN_STATEMENT_MIXED, itemOrigin, originList, palletVolume
@@ -541,13 +542,19 @@ function signInfo(s, dateIso) {
 /* ================================================================== Commercial invoice */
 
 const PROFORMA_NOTE = "This is a proforma invoice and not a demand for payment.";
+const FOC_STATEMENT = "No commercial value. The goods are free of charge and their value is declared for customs purposes only.";
 
-/** kind: "ci" ticari fatura, "pi" proforma fatura (aynı yerleşim; başlık, numara, beyan ve ağırlık özeti farklı) */
+/** Faturaya atıf veren belgelerde etiket: ücretsiz sevkiyatta "Free of Charge Invoice" */
+const invRefLabel = (s) => (s.foc?.enabled ? "Free of Charge Invoice" : "Commercial Invoice");
+
+/** kind: "ci" ticari fatura, "pi" proforma fatura, "foc" ücretsiz fatura (aynı yerleşim; başlık, numara, beyan, değer sütunları ve toplamlar farklı) */
 function renderInvoice(ctx, s, kind = "ci") {
   const isPi = kind === "pi";
+  const isFoc = kind === "foc";
   const T = computeTotals(s);
+  const hasVal = !isFoc || T.lines.some((v) => v > 0); // FOC: gümrük değeri yoksa fiyat sütunları ve toplam yazılmaz
   const cur = (s.meta.currency || "").toUpperCase();
-  const title = isPi ? "PROFORMA INVOICE" : "COMMERCIAL INVOICE";
+  const title = isPi ? "PROFORMA INVOICE" : isFoc ? "FREE OF CHARGE INVOICE" : "COMMERCIAL INVOICE";
   const docNo = isPi ? s.meta.proformaNo : s.meta.invoiceNo;
   const docDate = isPi ? s.meta.proformaDate : s.meta.invoiceDate;
   const d = new Doc(ctx, title, docNo || "—");
@@ -559,10 +566,11 @@ function renderInvoice(ctx, s, kind = "ci") {
     : [["Invoice No.", s.meta.invoiceNo, true], ["Invoice Date", fmtDate(s.meta.invoiceDate)]];
   const pi = [s.meta.proformaNo, fmtDate(s.meta.proformaDate)].filter(Boolean).join(" / ");
   if (pi && !isPi) pairs.push(["Proforma Invoice", pi]);
+  if (isFoc) pairs.push(["Reason for Shipment", focReasonText(s.foc)]);
   if (s.meta.orderRef) pairs.push(["Order Ref.", s.meta.orderRef]);
-  if (cur) pairs.push(["Currency", cur]);
+  if (cur && hasVal) pairs.push(["Currency", cur]);
   const inc = incotermText(s);
-  if (inc) pairs.push(["Terms of Delivery", inc]);
+  if (inc && hasVal) pairs.push(["Terms of Delivery", inc]);
   d.partyWithGrid(partyBlock(d, "Seller / Exporter", s.seller), pairs);
   partiesRows(d, s);
   d.infoGrid(shipmentPairs(s, "ci"));
@@ -570,7 +578,7 @@ function renderInvoice(ctx, s, kind = "ci") {
 
   const anyCode = s.items.some((it) => it.code);
   const anyHs = s.items.some((it) => it.hsCode);
-  const perLineCur = T.anyItemCurrency || T.mixedCurrency;
+  const perLineCur = !isFoc && (T.anyItemCurrency || T.mixedCurrency);
   const cols = [
     { key: "no", title: "No", align: "center", min: 18, max: 24 },
     ...(anyCode ? [{ key: "code", title: "Code", min: 34, max: 70 }] : []),
@@ -579,10 +587,10 @@ function renderInvoice(ctx, s, kind = "ci") {
     ...(originList(s).length > 1 ? [{ key: "origin", title: "Origin", align: "center", min: 40, max: 80 }] : []),
     { key: "qty", title: "Qty", align: "right", min: 30, max: 62 },
     { key: "unit", title: "Unit", align: "center", min: 26, max: 40 },
-    { key: "price", title: `Unit Price${perLineCur ? "" : " " + cur}`, align: "right", min: 44, max: 72 },
+    ...(hasVal ? [{ key: "price", title: `${isFoc ? "Customs Unit Value" : "Unit Price"}${perLineCur ? "" : " " + cur}`, align: "right", min: 44, max: 72 }] : []),
     ...(perLineCur ? [{ key: "cur", title: "Cur.", align: "center", min: 24, max: 34 }] : []),
-    ...(T.anyVatRate ? [{ key: "vat", title: "VAT %", align: "right", min: 28, max: 44 }] : []),
-    { key: "amount", title: `Amount${perLineCur ? "" : " " + cur}`, align: "right", min: 52, max: 84 }
+    ...(T.anyVatRate && !isFoc ? [{ key: "vat", title: "VAT %", align: "right", min: 28, max: 44 }] : []),
+    ...(hasVal ? [{ key: "amount", title: `${isFoc ? "Customs Value" : "Amount"}${perLineCur ? "" : " " + cur}`, align: "right", min: 52, max: 84 }] : [])
   ];
   const rows = s.items.map((it, i) => ({
     cells: {
@@ -601,45 +609,49 @@ function renderInvoice(ctx, s, kind = "ci") {
   /* Toplamlar + ağırlık özeti */
   const lines = [];
   const money = (v) => `${fmtMoney(v)}${cur ? " " + cur : ""}`;
-  if (T.hasCharges) lines.push(["SUBTOTAL", money(T.subtotal)]);
-  if (T.freight) lines.push(["FREIGHT", money(T.freight)]);
-  if (T.insurance) lines.push(["INSURANCE", money(T.insurance)]);
-  if (T.other) lines.push([(s.charges.otherLabel || "OTHER CHARGES").toUpperCase(), money(T.other)]);
-  if (T.discount) lines.push(["DISCOUNT", `-${money(T.discount)}`]);
-  if (T.vat) lines.push([`VAT${T.vatRate ? ` (${+T.vatRate.toFixed(2)}%)` : ""}`, money(T.vat)]);
+  if (!isFoc) {
+    if (T.hasCharges) lines.push(["SUBTOTAL", money(T.subtotal)]);
+    if (T.freight) lines.push(["FREIGHT", money(T.freight)]);
+    if (T.insurance) lines.push(["INSURANCE", money(T.insurance)]);
+    if (T.other) lines.push([(s.charges.otherLabel || "OTHER CHARGES").toUpperCase(), money(T.other)]);
+    if (T.discount) lines.push(["DISCOUNT", `-${money(T.discount)}`]);
+    if (T.vat) lines.push([`VAT${T.vatRate ? ` (${+T.vatRate.toFixed(2)}%)` : ""}`, money(T.vat)]);
+  }
   const incShort = [s.shipment.incoterm, s.shipment.incotermPlace].filter(Boolean).join(" ").toUpperCase();
-  const totalLabel = `TOTAL ${incShort ? incShort : ""}`.trim();
+  const totalLabel = isFoc ? "TOTAL CUSTOMS VALUE" : `TOTAL ${incShort ? incShort : ""}`.trim();
   const lastCols = sized.slice(-3);
-  const tw = Math.max(176, lastCols.reduce((a, c) => a + c.w, 0));
+  const tw = hasVal ? Math.max(176, lastCols.reduce((a, c) => a + c.w, 0)) : 0;
   const rowH = S.body * LH + 6;
-  const totalH = lines.length * rowH + (S.body + 1) * LH + 9;
+  const totalH = hasVal ? lines.length * rowH + (S.body + 1) * LH + 9 : 0;
   const wp = s.options.showWeightsOnInvoice && !isPi ? weightPairs(T, s) : [];
   const wBlock = wp.length ? d.kv("Packing summary", wp, 68) : null;
-  const wW = d.w - tw - 10;
+  const wW = hasVal ? d.w - tw - 10 : d.w;
   const wm = wBlock ? wBlock.measure(wW) : { h: 0 };
   const blockH = Math.max(totalH, wm.h);
-  d.gap(6);
+  if (blockH) d.gap(6);
   d.ensure(blockH);
   const ty = d.y;
   const tx = d.x1 - tw;
   let yy = ty;
-  for (const [k, v] of lines) {
+  if (hasVal) for (const [k, v] of lines) {
     d.text(k, tx + PAD, yy + 3, { font: "s", size: S.small, color: C.muted, cs: 0.3 });
     d.text(v, d.x1 - PAD, yy + 2.4, { size: S.body, color: C.text, align: "right" });
     yy += rowH;
     d.hline(tx, d.x1, yy - 1, 0.5, C.soft);
   }
   const gh = (S.body + 1) * LH + 9;
-  d.rect(tx, yy, tw, gh, { fill: C.dark });
-  const lab = d.wrap(totalLabel, "b", S.small, tw * 0.55)[0] || totalLabel;
-  d.text(lab, tx + PAD, yy + 4.6, { font: "b", size: S.small, color: C.white, cs: 0.3 });
-  d.text(money(T.total), d.x1 - PAD, yy + 3.6, { font: "b", size: S.body + 1, color: C.white, align: "right" });
+  if (hasVal) {
+    d.rect(tx, yy, tw, gh, { fill: C.dark });
+    const lab = d.wrap(totalLabel, "b", S.small, tw * 0.55)[0] || totalLabel;
+    d.text(lab, tx + PAD, yy + 4.6, { font: "b", size: S.small, color: C.white, cs: 0.3 });
+    d.text(money(isFoc ? T.subtotal : T.total), d.x1 - PAD, yy + 3.6, { font: "b", size: S.body + 1, color: C.white, align: "right" });
+  }
   if (wBlock) wBlock.draw(d.x0, ty, wW, wm.h, wm);
   d.y = ty + blockH;
 
-  if (s.options.amountInWords && cur) {
+  if (s.options.amountInWords && cur && hasVal) {
     d.gap(6);
-    d.row([d.cell({ label: "Amount in words", lines: [{ text: amountInWords(T.total, cur), font: "s", size: S.body, color: C.ink }] })], [1]);
+    d.row([d.cell({ label: "Amount in words", lines: [{ text: amountInWords(isFoc ? T.subtotal : T.total, cur), font: "s", size: S.body, color: C.ink }] })], [1]);
   }
 
   /* Banka + beyan/imza */
@@ -648,8 +660,9 @@ function renderInvoice(ctx, s, kind = "ci") {
     d.row([d.cell({ label: "Notes", lines: [{ text: s.proforma.notes.trim(), font: "r", size: S.body, color: C.ink }] })], [1]);
     d.gap(6);
   }
-  const bp = s.bank.show ? bankPairs(s.bank) : [];
-  const sign = d.sign(isPi ? PROFORMA_NOTE : s.sign.showDeclaration ? s.sign.declaration : "", signInfo(s, docDate));
+  const bp = s.bank.show && !isFoc ? bankPairs(s.bank) : [];
+  const focText = [FOC_STATEMENT, (s.foc?.note || "").trim()].filter(Boolean).join("\n");
+  const sign = d.sign(isPi ? PROFORMA_NOTE : isFoc ? focText : s.sign.showDeclaration ? s.sign.declaration : "", signInfo(s, docDate));
   if (bp.length) d.row([d.kv("Bank details", bp, 62), sign], [0.5, 0.5]);
   else d.row([sign], [0.5]);
 
@@ -669,7 +682,7 @@ function renderPacking(ctx, s) {
     ["Packing List No.", no, true],
     ["Date", fmtDate(s.meta.invoiceDate)]
   ];
-  if (s.meta.invoiceNo) pairs.push(["Commercial Invoice", s.meta.invoiceNo]);
+  if (s.meta.invoiceNo) pairs.push([invRefLabel(s), s.meta.invoiceNo]);
   const pi = [s.meta.proformaNo, fmtDate(s.meta.proformaDate)].filter(Boolean).join(" / ");
   if (pi) pairs.push(["Proforma Invoice", pi]);
   if (s.meta.orderRef) pairs.push(["Order Ref.", s.meta.orderRef]);
@@ -776,7 +789,8 @@ function renderTransport(ctx, s, kind) {
   ];
   if (sp.bookingNo) pairs.push(["Booking No.", sp.bookingNo]);
   if (sp.carrier) pairs.push(["Carrier / Line", sp.carrier]);
-  if (s.meta.invoiceNo) pairs.push(["Commercial Invoice", s.meta.invoiceNo]);
+  if (s.meta.invoiceNo) pairs.push([invRefLabel(s), s.meta.invoiceNo]);
+  if (s.meta.proformaNo) pairs.push(["Proforma Invoice", [s.meta.proformaNo, fmtDate(s.meta.proformaDate)].filter(Boolean).join(" / ")]);
   if (s.meta.orderRef) pairs.push(["Order Ref.", s.meta.orderRef]);
   d.partyWithGrid(partyBlock(d, isBl ? "Shipper" : "Shipper / Exporter", s.seller), pairs);
   const cons = partyBlock(d, "Consignee", consigneeOf(s));
@@ -852,7 +866,8 @@ function renderOrigin(ctx, s) {
     ["Declaration No.", no, true],
     ["Date", fmtDate(s.meta.invoiceDate)]
   ];
-  if (s.meta.invoiceNo) pairs.push(["Commercial Invoice", [s.meta.invoiceNo, fmtDate(s.meta.invoiceDate)].filter(Boolean).join(" / ")]);
+  if (s.meta.invoiceNo) pairs.push([invRefLabel(s), [s.meta.invoiceNo, fmtDate(s.meta.invoiceDate)].filter(Boolean).join(" / ")]);
+  if (s.meta.proformaNo) pairs.push(["Proforma Invoice", [s.meta.proformaNo, fmtDate(s.meta.proformaDate)].filter(Boolean).join(" / ")]);
   if (s.meta.orderRef) pairs.push(["Order Ref.", s.meta.orderRef]);
   d.partyWithGrid(partyBlock(d, "Exporter / Supplier", s.seller), pairs);
   d.row([partyBlock(d, "Importer / Consignee", consigneeOf(s))], [1]);
@@ -916,7 +931,8 @@ function renderInstruction(ctx, s, kind) {
   d.docTitle(meta.title);
 
   const pairs = [["Reference", no, true], ["Date", fmtDate(s.meta.invoiceDate)]];
-  if (s.meta.invoiceNo) pairs.push(["Commercial Invoice", [s.meta.invoiceNo, fmtDate(s.meta.invoiceDate)].filter(Boolean).join(" / ")]);
+  if (s.meta.invoiceNo) pairs.push([invRefLabel(s), [s.meta.invoiceNo, fmtDate(s.meta.invoiceDate)].filter(Boolean).join(" / ")]);
+  if (s.meta.proformaNo) pairs.push(["Proforma Invoice", [s.meta.proformaNo, fmtDate(s.meta.proformaDate)].filter(Boolean).join(" / ")]);
   if (s.meta.orderRef) pairs.push(["Order Ref.", s.meta.orderRef]);
   const toText = kind === "loading" ? ins.toLoading : kind === "coo" ? ins.toCoo : ins.toEur1;
   d.partyWithGrid(toCell(d, toText), pairs);
@@ -1038,7 +1054,8 @@ function renderInsurance(ctx, s) {
   if (!ctx.hasLetterhead) d.plainHeader(s.seller);
   d.docTitle("INSURANCE REQUEST");
   const pairs = [["Reference", no, true], ["Date", fmtDate(s.meta.invoiceDate)]];
-  if (s.meta.invoiceNo) pairs.push(["Commercial Invoice", [s.meta.invoiceNo, fmtDate(s.meta.invoiceDate)].filter(Boolean).join(" / ")]);
+  if (s.meta.invoiceNo) pairs.push([invRefLabel(s), [s.meta.invoiceNo, fmtDate(s.meta.invoiceDate)].filter(Boolean).join(" / ")]);
+  if (s.meta.proformaNo) pairs.push(["Proforma Invoice", [s.meta.proformaNo, fmtDate(s.meta.proformaDate)].filter(Boolean).join(" / ")]);
   if (s.meta.orderRef) pairs.push(["Order Ref.", s.meta.orderRef]);
   d.partyWithGrid(toCell(d, ins.to), pairs);
   d.row([d.cell({ label: "Request", lines: [{ text: "Please arrange marine cargo insurance for the shipment described below on the terms stated in this request, and send us the policy or certificate together with the premium invoice.", color: C.ink }] })], [1]);
@@ -1086,7 +1103,8 @@ function renderTransportOrder(ctx, s) {
   if (!ctx.hasLetterhead) d.plainHeader(s.seller);
   d.docTitle("TRANSPORT ORDER");
   const pairs = [["Order No.", no, true], ["Date", fmtDate(s.meta.invoiceDate)]];
-  if (s.meta.invoiceNo) pairs.push(["Commercial Invoice", s.meta.invoiceNo]);
+  if (s.meta.invoiceNo) pairs.push([invRefLabel(s), s.meta.invoiceNo]);
+  if (s.meta.proformaNo) pairs.push(["Proforma Invoice", [s.meta.proformaNo, fmtDate(s.meta.proformaDate)].filter(Boolean).join(" / ")]);
   if (s.meta.orderRef) pairs.push(["Order Ref.", s.meta.orderRef]);
   d.partyWithGrid(toCell(d, tr.to), pairs);
   d.row([d.cell({ label: "Order", lines: [{ text: "We hereby order the road transport of the goods described below under the conditions stated in this document. Please confirm acceptance and the vehicle details by return.", color: C.ink }] })], [1]);
@@ -1121,7 +1139,8 @@ function renderPreAlert(ctx, s) {
   if (!ctx.hasLetterhead) d.plainHeader(s.seller);
   d.docTitle("PRE-ALERT / SHIPMENT NOTICE");
   const pairs = [["Reference", no, true], ["Date", fmtDate(s.meta.invoiceDate)]];
-  if (s.meta.invoiceNo) pairs.push(["Commercial Invoice", [s.meta.invoiceNo, fmtDate(s.meta.invoiceDate)].filter(Boolean).join(" / ")]);
+  if (s.meta.invoiceNo) pairs.push([invRefLabel(s), [s.meta.invoiceNo, fmtDate(s.meta.invoiceDate)].filter(Boolean).join(" / ")]);
+  if (s.meta.proformaNo) pairs.push(["Proforma Invoice", [s.meta.proformaNo, fmtDate(s.meta.proformaDate)].filter(Boolean).join(" / ")]);
   if (s.meta.orderRef) pairs.push(["Your Order Ref.", s.meta.orderRef]);
   d.partyWithGrid(toCell(d, pa.to || consigneeOf(s).name), pairs);
   d.row([d.cell({ label: "Notice", lines: [{ text: `We are pleased to inform you that the goods under your order${s.meta.orderRef ? " " + s.meta.orderRef : ""} have been shipped as detailed below.`, color: C.ink }] })], [1]);
@@ -1143,7 +1162,7 @@ function renderPreAlert(ctx, s) {
   d.table(cargoCols({ vol: true }), cargoRows(s, T, { vol: true }));
 
   d.gap(8);
-  const docs = ["Commercial Invoice" + (s.meta.invoiceNo ? ` No. ${s.meta.invoiceNo}` : ""), "Packing List"];
+  const docs = [invRefLabel(s) + (s.meta.invoiceNo ? ` No. ${s.meta.invoiceNo}` : ""), "Packing List"];
   if (sp.blNo) docs.push(`Bill of Lading No. ${sp.blNo} (copy)`);
   if (pa.docsExtra.trim()) docs.push(...pa.docsExtra.split(/\n+/).map((x) => x.trim()).filter(Boolean));
   const blocks = [d.cell({ label: "Documents attached", lines: docs.map((x) => ({ text: `• ${x}` })) })];
@@ -1169,7 +1188,8 @@ function renderPalletList(ctx, s) {
   if (!ctx.hasLetterhead) d.plainHeader(s.seller);
   d.docTitle("PACKING LIST — BY PALLET / PACKAGE");
   const pairs = [["Packing List No.", no, true], ["Date", fmtDate(s.meta.invoiceDate)]];
-  if (s.meta.invoiceNo) pairs.push(["Commercial Invoice", s.meta.invoiceNo]);
+  if (s.meta.invoiceNo) pairs.push([invRefLabel(s), s.meta.invoiceNo]);
+  if (s.meta.proformaNo) pairs.push(["Proforma Invoice", [s.meta.proformaNo, fmtDate(s.meta.proformaDate)].filter(Boolean).join(" / ")]);
   if (s.meta.orderRef) pairs.push(["Order Ref.", s.meta.orderRef]);
   const inc = incotermText(s);
   if (inc) pairs.push(["Terms of Delivery", inc]);
@@ -1300,7 +1320,8 @@ function renderPoa(ctx, s) {
   d.row([d.cell({ label: "Scope of authority", lines: [{ text: p.scope || "—", color: C.ink }] })], [1]);
 
   const ref = [];
-  if (s.meta.invoiceNo) ref.push(["Commercial Invoice", [s.meta.invoiceNo, fmtDate(s.meta.invoiceDate)].filter(Boolean).join(" / ")]);
+  if (s.meta.invoiceNo) ref.push([invRefLabel(s), [s.meta.invoiceNo, fmtDate(s.meta.invoiceDate)].filter(Boolean).join(" / ")]);
+  if (s.meta.proformaNo) ref.push(["Proforma Invoice", [s.meta.proformaNo, fmtDate(s.meta.proformaDate)].filter(Boolean).join(" / ")]);
   if (s.meta.orderRef) ref.push(["Order Ref.", s.meta.orderRef]);
   const goods = s.items.filter((it) => it.description.trim()).map((it) => it.description.trim().replace(/\s*\n\s*/g, " ")).slice(0, 4).join("; ");
   if (goods) ref.push(["Goods", goods + (s.items.length > 4 ? "; …" : "")]);
@@ -1449,7 +1470,8 @@ function renderBill(ctx, s) {
   }
   const extra = [];
   if (b.drawnUnder.trim()) extra.push(["Drawn Under", b.drawnUnder.trim()]);
-  if (s.meta.invoiceNo) extra.push(["Commercial Invoice", [s.meta.invoiceNo, fmtDate(s.meta.invoiceDate)].filter(Boolean).join(" / ")]);
+  if (s.meta.invoiceNo) extra.push([invRefLabel(s), [s.meta.invoiceNo, fmtDate(s.meta.invoiceDate)].filter(Boolean).join(" / ")]);
+  if (s.meta.proformaNo) extra.push(["Proforma Invoice", [s.meta.proformaNo, fmtDate(s.meta.proformaDate)].filter(Boolean).join(" / ")]);
   if (s.meta.orderRef) extra.push(["Order Ref.", s.meta.orderRef]);
   if (extra.length) d.infoGrid(extra, 3);
   if (b.aval.trim()) { d.gap(6); d.row([d.cell({ label: "Aval (guarantee)", lines: [{ text: b.aval.trim(), color: C.ink }], minH: 46 })], [1]); }
@@ -1566,14 +1588,15 @@ function drawLabel(d, s, L, to, x, y, w, h, k, lb) {
 /* ================================================================== Dışa açık */
 
 /** which: 'ci' | 'pl' | 'both' | 'si' | 'bl' | 'origin' | 'all' → Uint8Array */
-const TITLES = { ci: "Commercial Invoice", pl: "Packing List", both: "Commercial Invoice & Packing List", proforma: "Proforma Invoice", si: "Shipping Instruction", bl: "Bill of Lading Draft", origin: "Declaration of Origin", loading: "Loading Instruction", coo: "Certificate of Origin Request", eur1: "EUR.1 Request", ins: "Insurance Request", trans: "Transport Order", prealert: "Pre-alert", pallet: "Packing List by Pallet", contract: "Sales Contract", bill: "Bill of Exchange", labels: "Labels", cmr: "CMR Consignment Note", poa: "Customs Power of Attorney", all: "Shipping Documents" };
+const TITLES = { ci: "Commercial Invoice", pl: "Packing List", both: "Commercial Invoice & Packing List", proforma: "Proforma Invoice", foc: "Free of Charge Invoice", si: "Shipping Instruction", bl: "Bill of Lading Draft", origin: "Declaration of Origin", loading: "Loading Instruction", coo: "Certificate of Origin Request", eur1: "EUR.1 Request", ins: "Insurance Request", trans: "Transport Order", prealert: "Pre-alert", pallet: "Packing List by Pallet", contract: "Sales Contract", bill: "Bill of Exchange", labels: "Labels", cmr: "CMR Consignment Note", poa: "Customs Power of Attorney", all: "Shipping Documents" };
 
 export async function buildPdf(state, letterhead, which = "ci") {
   const ctx = await createContext(state, letterhead);
   ctx.pdf.setTitle(`${TITLES[which] || TITLES.ci} ${(which === "proforma" ? state.meta.proformaNo : state.meta.invoiceNo) || ""}`.trim());
   if (state.seller.name) ctx.pdf.setAuthor(state.seller.name);
   const all = which === "all";
-  if (which === "ci" || which === "both" || all) renderInvoice(ctx, state);
+  if (which === "ci" || which === "both" || all) renderInvoice(ctx, state, state.foc?.enabled && which !== "ci" ? "foc" : "ci"); // ücretsiz sevkiyatta "tümü"/"both" FOC üretir
+  if (which === "foc") renderInvoice(ctx, state, "foc");
   if (which === "proforma") renderInvoice(ctx, state, "pi"); // "tüm belgeler"e girmez
   if (which === "pl" || which === "both" || all) renderPacking(ctx, state);
   if (which === "si" || all) renderTransport(ctx, state, "si");

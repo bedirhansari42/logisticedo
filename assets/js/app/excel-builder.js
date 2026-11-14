@@ -1,5 +1,6 @@
 /* Düzenlenebilir Excel çıktısı (ExcelJS): "Commercial Invoice" ve "Packing List" sayfaları, formüllü. */
 import { loadExcelJS } from "./loader.js";
+import { focReasonText } from "./foc.js";
 import { computeTotals, itemCurrency, itemVatRate, num, lineAmount, fmtDate, amountInWords, itemPackageType, packagesText, packageTypeLabel, round } from "./doc-model.js";
 
 const FONT = "Arial";
@@ -103,21 +104,28 @@ function infoPairs(ws, r, pairs, cols) {
   return r;
 }
 
+const PROFORMA_NOTE = "This is a proforma invoice and not a demand for payment.";
+const FOC_STATEMENT = "No commercial value. The goods are free of charge and their value is declared for customs purposes only.";
+/** Faturaya atıf veren etiket: ücretsiz sevkiyatta "Free of Charge Invoice" */
+const invRefLabel = (s) => (s.foc?.enabled ? "Free of Charge Invoice" : "Commercial Invoice");
+
 function docPairs(s, kind) {
   const sh = s.shipment;
+  const noVal = kind === "foc" && !computeTotals(s).lines.some((v) => v > 0); // FOC: değer yoksa para birimi ve teslim şartı yazılmaz
   const inc = [sh.incoterm, sh.incotermPlace].filter(Boolean).join(" ").toUpperCase();
   const pi = [s.meta.proformaNo, fmtDate(s.meta.proformaDate)].filter(Boolean).join(" / ");
   const head = kind === "pi"
     ? [["PROFORMA NO.", s.meta.proformaNo], ["PROFORMA DATE", fmtDate(s.meta.proformaDate)]]
-    : kind === "ci"
+    : kind === "ci" || kind === "foc"
     ? [["INVOICE NO.", s.meta.invoiceNo], ["INVOICE DATE", fmtDate(s.meta.invoiceDate)]]
-    : [["PACKING LIST NO.", s.meta.plNo || s.meta.invoiceNo], ["DATE", fmtDate(s.meta.invoiceDate)], ["COMMERCIAL INVOICE", s.meta.invoiceNo]];
+    : [["PACKING LIST NO.", s.meta.plNo || s.meta.invoiceNo], ["DATE", fmtDate(s.meta.invoiceDate)], [invRefLabel(s).toUpperCase(), s.meta.invoiceNo]];
   return [
     ...head,
-    ...(kind === "pi" ? [] : [["PROFORMA INVOICE", pi]]), ["ORDER REF.", s.meta.orderRef],
-    ...(kind !== "pl" ? [["CURRENCY", (s.meta.currency || "").toUpperCase()]] : []),
-    ["TERMS OF DELIVERY", inc ? `${inc} (INCOTERMS® 2020)` : ""],
-    ...(kind !== "pl" ? [["TERMS OF PAYMENT", sh.paymentTerms]] : []),
+    ...(kind === "pi" ? [] : [["PROFORMA INVOICE", pi]]),
+    ...(kind === "foc" ? [["REASON FOR SHIPMENT", focReasonText(s.foc)]] : []), ["ORDER REF.", s.meta.orderRef],
+    ...(kind !== "pl" && !noVal ? [["CURRENCY", (s.meta.currency || "").toUpperCase()]] : []),
+    ...(noVal ? [] : [["TERMS OF DELIVERY", inc ? `${inc} (INCOTERMS® 2020)` : ""]]),
+    ...(kind !== "pl" && kind !== "foc" ? [["TERMS OF PAYMENT", sh.paymentTerms]] : []),
     ["PORT / PLACE OF LOADING", sh.portLoading], ["PORT / PLACE OF DISCHARGE", sh.portDischarge],
     ["FINAL DESTINATION", sh.finalDestination], ["MODE OF TRANSPORT", sh.transportMode],
     ["COUNTRY OF ORIGIN", sh.countryOrigin], ["COUNTRY OF DESTINATION", sh.countryDestination],
@@ -154,30 +162,31 @@ function signature(ws, r, last, s, withDecl, opt = {}) {
 
 /* ================================================================ Commercial invoice */
 
-const PROFORMA_NOTE = "This is a proforma invoice and not a demand for payment.";
-
 /** kind: "ci" ticari fatura, "pi" proforma (başlık, numara, beyan ve ağırlık özeti farklı) */
 function invoiceSheet(wb, s, kind = "ci") {
   const isPi = kind === "pi";
-  const ws = wb.addWorksheet(isPi ? "Proforma Invoice" : "Commercial Invoice");
+  const isFoc = kind === "foc";
+  const ws = wb.addWorksheet(isPi ? "Proforma Invoice" : isFoc ? "Free of Charge Invoice" : "Commercial Invoice");
   const anyCode = s.items.some((it) => it.code);
   const cur = (s.meta.currency || "").toUpperCase();
   const T = computeTotals(s);
+  const hasVal = !isFoc || T.lines.some((v) => v > 0); // FOC: gümrük değeri yoksa fiyat sütunları ve toplam yazılmaz
   // Kalem bazlı para birimi / KDV oranı gerektiğinde tablonun sağına I (CUR) ve J (VAT %) eklenir
-  const perLineCur = T.anyItemCurrency || T.mixedCurrency;
-  const extra = [...(perLineCur ? ["CUR"] : []), ...(T.anyVatRate ? ["VAT %"] : [])];
+  const perLineCur = !isFoc && (T.anyItemCurrency || T.mixedCurrency);
+  const extra = [...(perLineCur ? ["CUR"] : []), ...(T.anyVatRate && !isFoc ? ["VAT %"] : [])];
   setup(ws, [5, anyCode ? 13 : 0.1, 44, 12, 10, 8, 13, 17, ...extra.map((x) => (x === "CUR" ? 7 : 8))]);
   if (!anyCode) ws.getColumn(2).hidden = true;
+  if (!hasVal) { ws.getColumn(7).hidden = true; ws.getColumn(8).hidden = true; }
 
-  put(ws, "A1:H1", isPi ? "PROFORMA INVOICE" : "COMMERCIAL INVOICE", { bold: true, size: 16, v: "middle" });
+  put(ws, "A1:H1", isPi ? "PROFORMA INVOICE" : isFoc ? "FREE OF CHARGE INVOICE" : "COMMERCIAL INVOICE", { bold: true, size: 16, v: "middle" });
   ws.getRow(1).height = 28;
   let r = 3;
   r = partyRows(ws, r, s, 4, 8, 62, 50);
   r++;
-  r = infoPairs(ws, r, docPairs(s, isPi ? "pi" : "ci"), [[1, 2, 3, 4], [5, 6, 7, 8]]);
+  r = infoPairs(ws, r, docPairs(s, isPi ? "pi" : isFoc ? "foc" : "ci"), [[1, 2, 3, 4], [5, 6, 7, 8]]);
   r++;
 
-  r = tableHeader(ws, r, ["NO", "CODE", "DESCRIPTION OF GOODS", "HS CODE", "QTY", "UNIT", `UNIT PRICE${perLineCur ? "" : " " + cur}`, `AMOUNT${perLineCur ? "" : " " + cur}`, ...extra]);
+  r = tableHeader(ws, r, ["NO", "CODE", "DESCRIPTION OF GOODS", "HS CODE", "QTY", "UNIT", `${isFoc ? "CUSTOMS UNIT VALUE" : "UNIT PRICE"}${perLineCur ? "" : " " + cur}`, `${isFoc ? "CUSTOMS VALUE" : "AMOUNT"}${perLineCur ? "" : " " + cur}`, ...extra]);
   const first = r;
   s.items.forEach((it, i) => {
     const q = num(it.qty), p = num(it.unitPrice);
@@ -209,25 +218,27 @@ function invoiceSheet(wb, s, kind = "ci") {
     totals.push(r);
     r++;
   };
-  line("SUBTOTAL", { formula: sumRef, result: T.subtotal });
+  if (hasVal && !isFoc) line("SUBTOTAL", { formula: sumRef, result: T.subtotal });
   const subRow = r - 1;
   const add = [];
-  if (T.freight) { line("FREIGHT", T.freight); add.push(`H${r - 1}`); }
-  if (T.insurance) { line("INSURANCE", T.insurance); add.push(`H${r - 1}`); }
-  if (T.other) { line((s.charges.otherLabel || "OTHER CHARGES").toUpperCase(), T.other); add.push(`H${r - 1}`); }
+  if (!isFoc && T.freight) { line("FREIGHT", T.freight); add.push(`H${r - 1}`); }
+  if (!isFoc && T.insurance) { line("INSURANCE", T.insurance); add.push(`H${r - 1}`); }
+  if (!isFoc && T.other) { line((s.charges.otherLabel || "OTHER CHARGES").toUpperCase(), T.other); add.push(`H${r - 1}`); }
   let disc = "";
-  if (T.discount) { line("DISCOUNT", -T.discount); disc = `+H${r - 1}`; }
-  if (T.vat) { line(`VAT${T.vatRate ? ` (${+T.vatRate.toFixed(2)}%)` : ""}`, T.vat); disc += `+H${r - 1}`; }
+  if (!isFoc && T.discount) { line("DISCOUNT", -T.discount); disc = `+H${r - 1}`; }
+  if (!isFoc && T.vat) { line(`VAT${T.vatRate ? ` (${+T.vatRate.toFixed(2)}%)` : ""}`, T.vat); disc += `+H${r - 1}`; }
   const inc = [s.shipment.incoterm, s.shipment.incotermPlace].filter(Boolean).join(" ").toUpperCase();
-  put(ws, `E${r}:G${r}`, `TOTAL ${inc}`.trim(), { bold: true, size: 9, h: "right", v: "middle", fill: DARK, color: "FFFFFFFF" });
-  put(ws, `H${r}`, { formula: `H${subRow}${add.map((a) => "+" + a).join("")}${disc}`, result: T.total }, { bold: true, h: "right", v: "middle", numFmt: MONEY_CUR, fill: DARK, color: "FFFFFFFF" });
-  ws.getRow(r).height = 20;
-  r += 2;
+  if (hasVal) {
+    put(ws, `E${r}:G${r}`, isFoc ? "TOTAL CUSTOMS VALUE" : `TOTAL ${inc}`.trim(), { bold: true, size: 9, h: "right", v: "middle", fill: DARK, color: "FFFFFFFF" });
+    put(ws, `H${r}`, isFoc ? { formula: sumRef, result: T.subtotal } : { formula: `H${subRow}${add.map((a) => "+" + a).join("")}${disc}`, result: T.total }, { bold: true, h: "right", v: "middle", numFmt: MONEY_CUR, fill: DARK, color: "FFFFFFFF" });
+    ws.getRow(r).height = 20;
+    r += 2;
+  }
 
-  if (s.options.amountInWords && cur) {
+  if (s.options.amountInWords && cur && hasVal) {
     put(ws, `A${r}:B${r}`, "AMOUNT IN WORDS", { bold: true, size: 8, fill: GREY, border: true, color: "FF5F686D", v: "middle" });
-    put(ws, `C${r}:H${r}`, amountInWords(T.total, cur), { bold: true, border: true, v: "middle" });
-    ws.getRow(r).height = Math.max(1, linesOf(amountInWords(T.total, cur), 90)) * 12 + 6;
+    put(ws, `C${r}:H${r}`, amountInWords(isFoc ? T.subtotal : T.total, cur), { bold: true, border: true, v: "middle" });
+    ws.getRow(r).height = Math.max(1, linesOf(amountInWords(isFoc ? T.subtotal : T.total, cur), 90)) * 12 + 6;
     r += 2;
   }
 
@@ -248,7 +259,7 @@ function invoiceSheet(wb, s, kind = "ci") {
     ws.getRow(r).height = Math.max(1, linesOf(notes, 90)) * 12 + 6;
     r += 2;
   }
-  if (s.bank.show) {
+  if (s.bank.show && !isFoc) {
     const bp = [["BANK", s.bank.bankName], ["BRANCH", s.bank.branch], ["BENEFICIARY", s.bank.accountName], ["IBAN", s.bank.iban], ["SWIFT / BIC", s.bank.swift], ["ACCOUNT NO.", s.bank.accountNo]].filter(([, v]) => v);
     if (bp.length) {
       put(ws, `A${r}:H${r}`, "BANK DETAILS", { bold: true, size: 8, color: "FF5F686D" });
@@ -261,7 +272,7 @@ function invoiceSheet(wb, s, kind = "ci") {
       r++;
     }
   }
-  signature(ws, r, 8, s, true, isPi ? { text: PROFORMA_NOTE, date: s.meta.proformaDate } : {});
+  signature(ws, r, 8, s, true, isPi ? { text: PROFORMA_NOTE, date: s.meta.proformaDate } : isFoc ? { text: [FOC_STATEMENT, (s.foc?.note || "").trim()].filter(Boolean).join(" ") } : {});
   return ws;
 }
 
@@ -333,7 +344,7 @@ export async function buildXlsx(state) {
   wb.creator = "logisticedo.com";
   wb.created = new Date();
   wb.calcProperties.fullCalcOnLoad = true;
-  invoiceSheet(wb, state);
+  invoiceSheet(wb, state, state.foc?.enabled ? "foc" : "ci"); // ücretsiz sevkiyatta FOC + packing list
   packingSheet(wb, state);
   const buf = await wb.xlsx.writeBuffer();
   return new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });

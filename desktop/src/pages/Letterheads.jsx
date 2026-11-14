@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast, ICONS } from "@common";
 import { useT } from "../lib/i18n.js";
 import { useApp } from "../lib/app-context.jsx";
+import { askConfirm } from "../lib/confirm.js";
 import { processLetterheadFile } from "@engine/letterhead.js";
 import { Dropzone } from "../components/Dropzone.jsx";
 import { LetterheadDialog } from "../components/LetterheadDialog.jsx";
@@ -51,7 +52,9 @@ export function Letterheads() {
 
   const onDelete = async (id) => {
     const rec = app.getLetterhead(id);
-    if (!rec || !window.confirm(t("lh.confirmDelete", { name: rec.name }))) return;
+    if (!rec) return;
+    const ok = await askConfirm({ title: t("d.confirm.delTitle"), message: t("lh.confirmDelete", { name: rec.name }), confirmLabel: t("d.act.del") });
+    if (!ok) return;
     await app.deleteLetterhead(id);
     toast(t("lh.deleted"));
   };

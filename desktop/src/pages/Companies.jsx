@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "@common";
 import { useT } from "../lib/i18n.js";
 import { useApp } from "../lib/app-context.jsx";
+import { askConfirm } from "../lib/confirm.js";
 import { newCompany } from "../lib/company.js";
 import { Icon } from "../components/Icons.jsx";
 
@@ -29,7 +30,8 @@ export function Companies() {
   };
 
   const remove = async () => {
-    if (!window.confirm(t("co.confirmDelete", { name: draft.name || t("co.untitled") }))) return;
+    const ok = await askConfirm({ title: t("d.confirm.delTitle"), message: t("co.confirmDelete", { name: draft.name || t("co.untitled") }), confirmLabel: t("d.act.del") });
+    if (!ok) return;
     if (!isNew) await app.deleteCompany(draft.id);
     const rest = app.companies.filter((c) => c.id !== draft.id);
     setDraft(rest[0] ? structuredClone(rest[0]) : null);

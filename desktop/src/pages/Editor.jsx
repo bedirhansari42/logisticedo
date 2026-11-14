@@ -5,7 +5,7 @@ import { useApp } from "../lib/app-context.jsx";
 import { go } from "../lib/router.js";
 import { useShipment } from "../lib/use-shipment.js";
 import { askConfirm } from "../lib/confirm.js";
-import { ALL_DOCS, DOC_GROUPS, DOC_ONLY, DOC_SECTIONS, DOC_TITLE, STATUSES, STEPS, docStatus } from "../lib/shipment-state.js";
+import { DOC_GROUPS, DOC_ONLY, DOC_SECTIONS, DOC_TITLE, STATUSES, STEPS, docStatus } from "../lib/shipment-state.js";
 import { buildDownload, saveBlob } from "../lib/download.js";
 import { computeTotals, fmtUi } from "@engine/doc-model.js";
 import { FormSection } from "../components/form/Sections.jsx";
@@ -15,9 +15,11 @@ import { ParseReport } from "../components/ParseReport.jsx";
 import { Icon, Spinner } from "../components/Icons.jsx";
 import { bankLabel } from "../lib/company.js";
 import { useRecordPickers } from "../lib/record-pickers.js";
+import { docGroupsFor } from "../foc/model.mjs";
+import { FocSettings } from "../components/form/FocSettings.jsx";
 
 const STEP_KEYS = Object.keys(STEPS);
-const USES = { ci: [], si: ["items"], bl: ["items"], pl: ["general", "items"], pallet: ["items"], contract: ["general", "items", "bank"], bill: ["general", "items", "bank"] };
+const USES = { ci: [], foc: [], si: ["items"], bl: ["items"], pl: ["general", "items"], pallet: ["items"], contract: ["general", "items", "bank"], bill: ["general", "items", "bank"] };
 
 function stepStatus(state, step) {
   if (step === "general") return state.buyer.name && state.seller.name ? "ready" : state.buyer.name || state.seller.name ? "partial" : "empty";
@@ -49,7 +51,7 @@ export function Editor({ id, step }) {
     if (!state) return null;
     const ph = (v, d) => (v ? fmtUi(v, d) : "");
     return {
-      state, auto: sh.doc.auto, update: sh.update, lh, T, itemView, setItemView,
+      state, auto: sh.doc.auto, update: sh.update, lh, T, itemView, setItemView, focMode: !!state.foc.enabled,
       placeholders: {
         "charges.vat": ph(T.vatCalc, 2),
         "packing.totalPackages": ph(T.itemPkgs, 0),
@@ -69,10 +71,12 @@ export function Editor({ id, step }) {
     );
   }
 
-  const isDoc = ALL_DOCS.includes(step);
+  const foc = !!state.foc.enabled;
+  const groups = docGroupsFor(DOC_GROUPS, foc);
+  const isDoc = groups.some((g) => g.docs.includes(step)); // ücretsiz sevkiyatta "ci", normalde "foc" adresi geçersiz: Genel bilgilere düşer
   const active = isDoc || STEP_KEYS.includes(step) ? step : "general";
-  const previewDoc = isDoc ? step : "ci";
-  const letters = isDoc ? DOC_SECTIONS[step] : STEPS[active];
+  const previewDoc = isDoc ? step : foc ? "foc" : "ci";
+  const letters = (isDoc ? DOC_SECTIONS[step] : STEPS[active]).filter((l) => !(foc && !isDoc && l === "E")); // ücretsizde masraf/KDV bölümü yok
   const title = state.meta.invoiceNo.trim() || state.meta.proformaNo.trim() || t("d.untitled");
   const goStep = (k) => go(`/s/${id}/${k}`);
 
@@ -163,7 +167,7 @@ export function Editor({ id, step }) {
               <Dot s={stepStatus(state, k)} /><span>{t(`d.step.${k}`)}</span>
             </button>
           ))}
-          {DOC_GROUPS.map((g) => (
+          {groups.map((g) => (
             <div key={g.key}>
               <p className="ed-group">{t(g.titleKey)}</p>
               {g.docs.map((d) => (
@@ -183,6 +187,7 @@ export function Editor({ id, step }) {
               {(USES[step] || ["general", "items"]).map((k) => <button key={k} type="button" className="btn btn--ghost btn--sm" onClick={() => goStep(k)}>{t(`d.step.${k}`)}<Icon name="chevron" /></button>)}
             </div>
           )}
+          {((active === "general" && !isDoc) || step === "foc") && <FocSettings ctx={ctx} />}
           {letters.map((l) => <FormSection key={`${active}-${l}`} letter={l} ctx={ctx} only={isDoc ? DOC_ONLY[step]?.[l] : undefined} titleKey={isDoc ? DOC_TITLE[step]?.[l] : undefined} />)}
         </div>
 

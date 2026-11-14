@@ -35,15 +35,18 @@ const COLS = {
 };
 
 /** invoiceOnly (proforma): tek belge para birimi var, kalem başına para birimi sütunu yok */
-function visibleCols(state, view, invoiceOnly) {
+function visibleCols(state, view, invoiceOnly, focMode) {
   const showCode = state.items.some((it) => it.code);
-  return COLS[view].filter(([f]) => (f !== "code" || showCode) && !(invoiceOnly && f === "currency"));
+  return COLS[view].filter(([f]) => (f !== "code" || showCode) && !((invoiceOnly || focMode) && f === "currency") && !(focMode && f === "vatRate"));
 }
+
+/** Ücretsiz sevkiyatta fiyat ve tutar sütunları gümrük değeri olarak adlandırılır */
+const colKey = (f, key, focMode) => (focMode && f === "unitPrice" ? "d.foc.colPrice" : focMode && f === "amount" ? "d.foc.colAmount" : key);
 
 export function ItemsTable({ ctx }) {
   const t = useT();
   const { state, auto, update, itemView: view, setItemView } = ctx;
-  const cols = visibleCols(state, view, ctx.invoiceOnly);
+  const cols = visibleCols(state, view, ctx.invoiceOnly, ctx.focMode);
   const focusLast = useRef(false);
   const cur = (state.meta.currency || "").trim().toUpperCase();
 
@@ -113,7 +116,7 @@ export function ItemsTable({ ctx }) {
           <thead>
             <tr>
               <th className="it-no">{t("it.no")}</th>
-              {cols.map(([f, key, , cls]) => <th key={f} className={cls}>{t(key)}</th>)}
+              {cols.map(([f, key, , cls]) => <th key={f} className={cls}>{t(colKey(f, key, ctx.focMode))}</th>)}
               <th className="it-act" />
             </tr>
           </thead>
@@ -124,7 +127,7 @@ export function ItemsTable({ ctx }) {
                 <td className="it-no">{i + 1}</td>
                 {cols.map(([field, key, type, cls, list]) => {
                   const isAuto = auto.has(`item:${it.id}:${field}`);
-                  const aria = `${t(key)} ${i + 1}`;
+                  const aria = `${t(colKey(field, key, ctx.focMode))} ${i + 1}`;
                   const common = { "aria-label": aria, onPaste: (e) => onPaste(e, it.id, field) };
                   let cell;
                   if (type === "area") {

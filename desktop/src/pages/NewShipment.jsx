@@ -4,7 +4,7 @@ import { useApp } from "../lib/app-context.jsx";
 import { go } from "../lib/router.js";
 import { parseProforma } from "@engine/parse/index.js";
 import { newItem } from "@engine/doc-model.js";
-import { applyParsed, freshState, newShipmentRecord } from "../lib/shipment-state.js";
+import { applyParsed, freshState, newShipmentRecord, summarize } from "../lib/shipment-state.js";
 import { applyCompanyToState, companyProfile, pickBank } from "../lib/company.js";
 import { Dropzone } from "../components/Dropzone.jsx";
 import { ProformaPicker } from "../components/ProformaPicker.jsx";
@@ -16,6 +16,7 @@ export function NewShipment() {
   const t = useT();
   const app = useApp();
   const [busy, setBusy] = useState(false);
+  const [foc, setFoc] = useState(false); // ücretsiz (Free of Charge) sevkiyat
   const [result, setResult] = useState(null); // { id, parse } | { error, name } | { reading }
   const [companyId, setCompanyId] = useState(app.lastCompanyId);
   const company = app.getCompany(companyId);
@@ -29,6 +30,7 @@ export function NewShipment() {
   const prev = app.shipments[0]?.state || null;
 
   const create = async (state, auto, parse) => {
+    state.foc.enabled = foc;
     if (company) {
       applyCompanyToState(state, company, pickBank(company, state.meta.currency)); // seçilen şirket satıcı, imza ve para birimine uyan hesabı yazar
       app.setLastCompany(company.id);
@@ -65,6 +67,7 @@ export function NewShipment() {
 
   const pickProforma = async (pf) => {
     const rec = shipmentFromProforma(pf, { companyId: company ? company.id : undefined, lhId: lh ? lh.id : undefined }); // sayfadaki şirket/antet seçimi doluysa o kazanır
+    if (foc) { rec.state.foc.enabled = true; rec.summary = summarize(rec.state); }
     await app.saveShipment(rec);
     go(`/s/${rec.id}`);
   };
@@ -92,6 +95,10 @@ export function NewShipment() {
           </select>
           {app.letterheads.length === 0 && <p className="muted">{t("d.new.noLh")} <a className="link" href="#/letterheads">{t("d.dash.addLh")}</a></p>}
         </div>
+        <label className="check">
+          <input type="checkbox" checked={foc} onChange={(e) => setFoc(e.target.checked)} />
+          <span>{t("d.foc.enable")}</span>
+        </label>
       </section>
 
       <section className="card-block pad">

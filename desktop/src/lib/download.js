@@ -6,10 +6,11 @@ import { safeFileName } from "@engine/doc-model.js";
 export async function buildDownload(kind, s, lh) {
   const base = safeFileName(s.meta.invoiceNo) || "document";
   if (kind === "proforma-xlsx") return { blob: await buildProformaXlsx(s), name: `Proforma-Invoice_${safeFileName(s.meta.proformaNo) || "draft"}.xlsx` };
-  if (kind === "xlsx") return { blob: await buildXlsx(s), name: `CI-PL_${base}.xlsx` };
+  if (kind === "xlsx") return { blob: await buildXlsx(s), name: `${s.foc?.enabled ? "FOC" : "CI"}-PL_${base}.xlsx` };
   const bytes = await buildPdf(s, lh, kind);
   const names = {
     ci: `Commercial-Invoice_${base}.pdf`,
+    foc: `Free-of-Charge-Invoice_${base}.pdf`,
     proforma: `Proforma-Invoice_${safeFileName(s.meta.proformaNo) || "draft"}.pdf`,
     pl: `Packing-List_${safeFileName(s.meta.plNo) || base}.pdf`,
     si: `Shipping-Instruction_${safeFileName(s.ship.siNo) || base}.pdf`,
