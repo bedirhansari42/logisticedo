@@ -335,6 +335,8 @@ body { overflow: hidden; }
 :root[data-theme="light"] .btn--ghost:hover { background: rgba(20, 23, 25, 0.05); border-color: rgba(20, 23, 25, 0.3); }
 :root[data-theme="light"] .tag, :root[data-theme="light"] .lang-switch button[aria-pressed="true"] { background: rgba(20, 23, 25, 0.08); }
 :root[data-theme="light"] .dropzone { border-color: rgba(20, 23, 25, 0.25); }
+:root[data-theme="light"] .segmented button[aria-pressed="true"], :root[data-theme="light"] .segmented button[aria-selected="true"] { background: var(--green); color: #fff; } /* açık temada seçili sekme zeminle karışmasın (surface-3 ≈ bg-deep) */
+:root[data-theme="light"] .segmented button:not([aria-pressed="true"]):not([aria-selected="true"]):hover { color: var(--text); }
 :root[data-theme="light"] .spinner { border-color: rgba(20, 23, 25, 0.12); border-top-color: var(--green); }
 :root[data-theme="light"] .status--delivered { background: var(--green-tint); color: var(--green-ink); }
 :root[data-theme="light"] .pv-stage, :root[data-theme="light"] .pvd-body, :root[data-theme="light"] .lhd-stage { background: #d6dcdd; }
@@ -390,8 +392,6 @@ body { overflow: hidden; }
 .nt-addbtn, .nt-newcol { display: inline-flex; align-items: center; gap: 8px; padding: 8px 6px; background: none; border: 0; color: var(--text-4); font: inherit; font-size: 0.875rem; cursor: pointer; border-radius: 8px; }
 .nt-addbtn:hover, .nt-newcol:hover { color: var(--text); background: var(--surface-2); }
 .nt-newcol { flex: 0 0 200px; justify-content: center; padding: 14px; border: 1px dashed var(--line-strong); }
-.nt-add { display: grid; gap: 8px; }
-.nt-add-act { display: flex; gap: 8px; }
 .dialog--card { width: min(520px, calc(100vw - 24px)); }
 .dialog--card .dialog-body { grid-template-columns: 1fr; }
 .nt-form { display: grid; gap: 14px; }

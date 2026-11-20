@@ -14,7 +14,7 @@ export function Notes() {
   const ready = useRef(false);
   const [filter, setFilter] = useState("all");
   const [edit, setEdit] = useState(null); // düzenlenen kartın kimliği
-  const [adding, setAdding] = useState(null); // { colId, title, err }
+  const [creating, setCreating] = useState(null); // yeni kart penceresi: { columnId }
   const [renaming, setRenaming] = useState(null); // { colId, value }
   const [orderOpen, setOrderOpen] = useState(false); // sütun sırası penceresi
   const [palette, setPalette] = useState(null); // renk paleti açık olan sütunun kimliği
@@ -37,12 +37,6 @@ export function Notes() {
   if (!board) return <div className="page page--center"><Spinner /></div>;
   const last = board.columns[board.columns.length - 1];
 
-  const submitAdd = () => {
-    const r = checkCard({ title: adding.title });
-    if (!r.ok) { setAdding((a) => ({ ...a, err: r.key })); return; }
-    setBoard((b) => addCard(b, adding.colId, { title: adding.title, label: filter === "all" ? null : filter }));
-    setAdding(null); // kart eklenince form kapanır; yeni kart için "Kart ekle"ye yeniden basılır
-  };
   const submitRename = () => { if (renaming) setBoard((b) => renameColumn(b, renaming.colId, renaming.value)); setRenaming(null); };
   const removeColumn = async (col) => {
     const n = board.cards.filter((c) => c.columnId === col.id).length;
@@ -113,23 +107,17 @@ export function Notes() {
               ))}
               {over?.colId === col.id && over.before === null && <div className="nt-drop" />}
             </div>
-            {adding?.colId === col.id ? (
-              <div className="nt-add">
-                <input className={`input${adding.err ? " is-bad" : ""}`} value={adding.title} autoFocus placeholder={t("d.nt.addPh")} onChange={(e) => setAdding({ ...adding, title: e.target.value, err: null })} onKeyDown={(e) => { if (e.key === "Enter") submitAdd(); if (e.key === "Escape") setAdding(null); }} aria-label={t("d.nt.f.title")} />
-                {adding.err && <p className="pl-err">{t(adding.err)}</p>}
-                <div className="nt-add-act">
-                  <button type="button" className="btn btn--primary btn--sm" onClick={submitAdd}>{t("d.nt.add")}</button>
-                  <button type="button" className="btn btn--quiet btn--sm" onClick={() => setAdding(null)}>{t("d.confirm.cancel")}</button>
-                </div>
-              </div>
-            ) : (
-              <button type="button" className="nt-addbtn" onClick={() => setAdding({ colId: col.id, title: "", err: null })}><Icon name="plus" />{t("d.nt.addCard")}</button>
-            )}
+            <button type="button" className="nt-addbtn" onClick={() => setCreating({ columnId: col.id })}><Icon name="plus" />{t("d.nt.addCard")}</button>
           </section>
         ))}
       </div>
 
       {orderOpen && <ColumnsDialog columns={board.columns} cardCount={(id) => board.cards.filter((c) => c.columnId === id).length} onMove={(id, to) => setBoard((b) => moveColumn(b, id, to))} onAdd={(name) => setBoard((b) => addColumn(b, name))} onClose={() => setOrderOpen(false)} />}
+
+      {creating && (
+        <CardDialog key="new-card" isNew card={{ title: "", note: "", label: filter === "all" ? null : filter, due: null, columnId: creating.columnId }} columns={board.columns} onClose={() => setCreating(null)}
+          onSave={(fields) => { setBoard((b) => addCard(b, fields.columnId, fields)); setCreating(null); }} />
+      )}
 
       {editing && (
         <CardDialog key={editing.id} card={editing} columns={board.columns} onClose={() => setEdit(null)} onDelete={() => removeCard(editing)}
