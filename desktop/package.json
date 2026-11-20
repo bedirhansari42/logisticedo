@@ -21,7 +21,8 @@
     "test:foc": "node --test src/foc/*.test.mjs",
     "test:proforma": "node --test src/proforma/*.test.mjs",
     "test:backup": "node --test src/backup/*.test.mjs",
-    "test:notes": "node --test src/notes/*.test.mjs"
+    "test:notes": "node --test src/notes/*.test.mjs",
+    "test:auth": "node --test src/auth/*.test.mjs *.test.js"
   },
   "build": {
     "appId": "com.logisticedo.desktop",
@@ -35,6 +36,9 @@
       "main.js",
       "preload.js",
       "backup-main.js",
+      "auth-main.js",
+      "net-policy.js",
+      "auth-config.json",
       "package.json",
       "app/**/*"
     ],
@@ -87,6 +91,7 @@
     "vite": "^8.3.7"
   },
   "dependencies": {
+    "firebase": "^13.4.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   }

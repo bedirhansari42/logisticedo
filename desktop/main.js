@@ -2,6 +2,7 @@
 const { app, BrowserWindow, Menu, protocol, net, shell, session, dialog, ipcMain } = require("electron");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
+const { isAllowed } = require("./net-policy.js");
 
 // Uygulama adı: menü çubuğu, Hakkında penceresi ve Dock bu adı kullanır
 app.setName("logisticedo");
@@ -49,13 +50,11 @@ async function serveFile(request) {
   }
 }
 
-// "Dosyalar cihazdan çıkmaz" vaadini uygulama düzeyinde zorla: uygulama dışına hiçbir ağ isteği gitmez.
+// "Dosyalar cihazdan çıkmaz" vaadini uygulama düzeyinde zorla: uygulama dışına yalnızca giriş için gereken
+// Firebase alan adlarından başka ağ isteği gitmez (karar net-policy.js'de, testli).
 function lockNetwork(ses) {
   ses.webRequest.onBeforeRequest((details, cb) => {
-    const u = details.url;
-    const ok = u.startsWith(SCHEME + "://") || (DEV_URL && u.startsWith(DEV_URL.replace(/\/$/, ""))) || (DEV_URL && u.startsWith("ws://localhost")) || u.startsWith("data:") || u.startsWith("blob:") ||
-      u.startsWith("devtools:") || u.startsWith("file:");
-    cb({ cancel: !ok });
+    cb({ cancel: !isAllowed(details.url, { scheme: SCHEME, devUrl: DEV_URL }) });
   });
 }
 
@@ -127,6 +126,10 @@ app.whenReady().then(() => {
   require("./backup-main.js").register({
     dialog, ipcMain, getWindow: () => win, testDir: process.env.LGX_TEST_DIR || null,
     // yalnızca kendi sayfamızdan gelen istekler (uygulama protokolü ya da geliştirme sunucusu)
+    isTrusted: (e) => { const u = e.senderFrame?.url || ""; return u.startsWith(SCHEME + "://") || !!(DEV_URL && u.startsWith(DEV_URL.replace(/\/$/, ""))); }
+  });
+  require("./auth-main.js").register({
+    ipcMain, isPackaged: app.isPackaged,
     isTrusted: (e) => { const u = e.senderFrame?.url || ""; return u.startsWith(SCHEME + "://") || !!(DEV_URL && u.startsWith(DEV_URL.replace(/\/$/, ""))); }
   });
   protocol.handle(SCHEME, serveFile);
