@@ -1,6 +1,7 @@
 /* Düzenlenebilir Excel çıktısı (ExcelJS): "Commercial Invoice" ve "Packing List" sayfaları, formüllü. */
 import { loadExcelJS } from "./loader.js";
 import { focReasonText } from "./foc.js";
+import { cellValue, formula } from "./cell-value.js";
 import { DEFAULT_PROFORMA_DECLARATION, computeTotals, itemCurrency, itemVatRate, num, lineAmount, fmtDate, amountInWords, itemPackageType, packagesText, packageTypeLabel, round } from "./doc-model.js";
 
 const FONT = "Arial";
@@ -37,7 +38,7 @@ function put(ws, ref, value, style = {}) {
   const [a, b] = ref.split(":");
   if (b) ws.mergeCells(ref);
   const c = ws.getCell(a);
-  c.value = value;
+  c.value = cellValue(value);
   c.font = { name: FONT, size: style.size || 9, bold: !!style.bold, color: style.color ? { argb: style.color } : undefined };
   c.alignment = { vertical: style.v || "top", horizontal: style.h || "left", wrapText: style.wrap !== false };
   if (style.fill) c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: style.fill } };
@@ -197,7 +198,7 @@ function invoiceSheet(wb, s, kind = "ci") {
     put(ws, `F${r}`, (it.unit || "").toUpperCase(), { border: true, h: "center" });
     put(ws, `G${r}`, p ?? "", { border: true, h: "right", numFmt: PRICE });
     const amt = lineAmount(it);
-    put(ws, `H${r}`, q != null && p != null ? { formula: `ROUND(E${r}*G${r},2)`, result: amt } : (amt ?? ""), { border: true, h: "right", numFmt: MONEY });
+    put(ws, `H${r}`, q != null && p != null ? formula(`ROUND(E${r}*G${r},2)`, amt) : (amt ?? ""), { border: true, h: "right", numFmt: MONEY });
     let xc = 9;
     if (perLineCur) put(ws, `${colLetter(xc++)}${r}`, itemCurrency(it, s), { border: true, h: "center" });
     if (T.anyVatRate) put(ws, `${colLetter(xc++)}${r}`, itemVatRate(it, s) / 100, { border: true, h: "right", numFmt: "0.##%" });
@@ -217,7 +218,7 @@ function invoiceSheet(wb, s, kind = "ci") {
     totals.push(r);
     r++;
   };
-  if (hasVal && !isFoc) line("SUBTOTAL", { formula: sumRef, result: T.subtotal });
+  if (hasVal && !isFoc) line("SUBTOTAL", formula(sumRef, T.subtotal));
   const subRow = r - 1;
   const add = [];
   if (!isFoc && T.freight) { line("FREIGHT", T.freight); add.push(`H${r - 1}`); }
@@ -229,7 +230,7 @@ function invoiceSheet(wb, s, kind = "ci") {
   const inc = [s.shipment.incoterm, s.shipment.incotermPlace].filter(Boolean).join(" ").toUpperCase();
   if (hasVal) {
     put(ws, `E${r}:G${r}`, isFoc ? "TOTAL CUSTOMS VALUE" : `TOTAL ${inc}`.trim(), { bold: true, size: 9, h: "right", v: "middle", fill: DARK, color: "FFFFFFFF" });
-    put(ws, `H${r}`, isFoc ? { formula: sumRef, result: T.subtotal } : { formula: `H${subRow}${add.map((a) => "+" + a).join("")}${disc}`, result: T.total }, { bold: true, h: "right", v: "middle", numFmt: MONEY_CUR, fill: DARK, color: "FFFFFFFF" });
+    put(ws, `H${r}`, isFoc ? formula(sumRef, T.subtotal) : formula(`H${subRow}${add.map((a) => "+" + a).join("")}${disc}`, T.total), { bold: true, h: "right", v: "middle", numFmt: MONEY_CUR, fill: DARK, color: "FFFFFFFF" });
     ws.getRow(r).height = 20;
     r += 2;
   }
@@ -309,11 +310,11 @@ function packingSheet(wb, s) {
   const sumOr = (col, override, itemSum) => {
     const hasOverride = override != null && Math.abs(override - itemSum) > 1e-9;
     if (hasOverride) return override;
-    return s.items.length && itemSum ? { formula: `SUM(${col}${first}:${col}${last})`, result: itemSum } : "";
+    return s.items.length && itemSum ? formula(`SUM(${col}${first}:${col}${last})`, itemSum) : "";
   };
   const style = { bold: true, border: true, fill: GREY, h: "right", v: "middle" };
   put(ws, `A${r}:C${r}`, "TOTAL", { ...style, h: "left" });
-  put(ws, `D${r}`, T.qtyTotal != null ? { formula: `SUM(D${first}:D${last})`, result: T.qtyTotal } : "", { ...style, numFmt: QTY });
+  put(ws, `D${r}`, T.qtyTotal != null ? formula(`SUM(D${first}:D${last})`, T.qtyTotal) : "", { ...style, numFmt: QTY });
   put(ws, `E${r}`, T.qtyTotal != null ? T.qtyUnit : "", { ...style, h: "center" });
   put(ws, `F${r}`, sumOr("F", num(s.packing.totalPackages), T.itemPkgs), { ...style, numFmt: QTY });
   put(ws, `G${r}`, packageTypeLabel(s, T), { ...style, h: "center" });

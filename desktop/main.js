@@ -2,7 +2,7 @@
 const { app, BrowserWindow, Menu, protocol, net, shell, session, dialog, ipcMain } = require("electron");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
-const { isAllowed } = require("./net-policy.js");
+const { isAllowed, isTrustedUrl, isTrustedSender } = require("./net-policy.js");
 
 // Uygulama adı: menü çubuğu, Hakkında penceresi ve Dock bu adı kullanır
 app.setName("logisticedo");
@@ -82,7 +82,7 @@ function createWindow() {
 
   // Uygulama içinde başka adrese gidilemez; dış bağlantılar sistem tarayıcısında açılır.
   win.webContents.on("will-navigate", (e, url) => {
-    if (!url.startsWith(SCHEME + "://") && !(DEV_URL && url.startsWith(DEV_URL))) e.preventDefault();
+    if (!isTrustedUrl(url, { scheme: SCHEME, host: HOST, devUrl: DEV_URL })) e.preventDefault();
   });
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//i.test(url)) shell.openExternal(url);
@@ -126,11 +126,11 @@ app.whenReady().then(() => {
   require("./backup-main.js").register({
     dialog, ipcMain, getWindow: () => win, testDir: process.env.LGX_TEST_DIR || null,
     // yalnızca kendi sayfamızdan gelen istekler (uygulama protokolü ya da geliştirme sunucusu)
-    isTrusted: (e) => { const u = e.senderFrame?.url || ""; return u.startsWith(SCHEME + "://") || !!(DEV_URL && u.startsWith(DEV_URL.replace(/\/$/, ""))); }
+    isTrusted: (e) => isTrustedSender(e, { scheme: SCHEME, host: HOST, devUrl: DEV_URL })
   });
   require("./auth-main.js").register({
     ipcMain, isPackaged: app.isPackaged,
-    isTrusted: (e) => { const u = e.senderFrame?.url || ""; return u.startsWith(SCHEME + "://") || !!(DEV_URL && u.startsWith(DEV_URL.replace(/\/$/, ""))); }
+    isTrusted: (e) => isTrustedSender(e, { scheme: SCHEME, host: HOST, devUrl: DEV_URL })
   });
   protocol.handle(SCHEME, serveFile);
   lockNetwork(session.defaultSession);

@@ -139,3 +139,21 @@ test("app rounding agrees with an independent decimal implementation", () => {
   assert.equal(roundDecimal(2.425, 2), 2.43);
   assert.equal(roundDecimal(-2.425, 2), -2.43);
 });
+
+test("restored object-valued text fields are written as text, never as formula or hyperlink cells", async () => {
+  const forged = () => JSON.parse('{"formula":"1+1","result":2}');
+  const link = () => JSON.parse('{"text":"x","hyperlink":"https://example.invalid"}');
+  const input = base({ items: [{ ...A, name: forged(), hsCode: link() }, { ...B, name: link() }], costs: [{ ...FREIGHT, label: forged() }, { ...LOCAL, label: link() }] });
+  const result = calcLanded(input);
+  assert.equal(result.ok, true);
+  const wb = await loadBack(await buildLandedXlsx(input, result, deps));
+  const calc = wb.getWorksheet("Calculation"), inputs = wb.getWorksheet("Inputs");
+  const nameCol = keyCol(wb, "name");
+  assert.equal(typeof calc.getCell(`${nameCol}6`).value, "string");
+  assert.equal(typeof calc.getCell(`${nameCol}7`).value, "string");
+  for (const ws of [calc, inputs]) ws.eachRow((row) => row.eachCell((cell) => assert.equal(cell.hyperlink, undefined, `${ws.name}!${cell.address}`)));
+  for (let r = 1; r <= inputs.rowCount; r++) { const v = inputs.getCell(`A${r}`).value; assert.ok(v === null || typeof v !== "object", `Inputs!A${r}`); }
+  // the app's own formulas are still formulas, and the numbers still agree with calcLanded
+  const cell = evalWorkbook(wb);
+  close(cell("Calculation", `${keyCol(wb, "landed")}${totalRow(wb)}`), result.totals.landed, "total landed");
+});

@@ -3,6 +3,7 @@
    Ön izleyicilerde (Quick Look vb.) değerler görünsün diye. */
 import { allocate, round } from "./money.mjs";
 import { DEFAULTS } from "./rules.mjs";
+import { cellValue, formula as fx } from "../../../assets/js/app/cell-value.js";
 
 export const colName = (n) => {
   let s = "";
@@ -66,9 +67,9 @@ export async function buildLandedXlsx(input, result, deps) {
   const rateRef = (c) => (c === "TRY" ? "1" : `$B$${ratesRow[c]}`);
   const rateOf = (c) => (c === "TRY" ? 1 : input.rates[c]);
 
-  wsI.getCell("A1").value = "Landed cost - inputs"; wsI.getCell("A1").font = { bold: true, size: 13 };
+  wsI.getCell("A1").value = cellValue("Landed cost - inputs"); wsI.getCell("A1").font = { bold: true, size: 13 };
   wsI.getCell("A2").value = "Estimate only: rates are entered by the user; this is not a customs calculation.";
-  const kv = (row, label, value) => { wsI.getCell(`A${row}`).value = label; wsI.getCell(`B${row}`).value = value; };
+  const kv = (row, label, value) => { wsI.getCell(`A${row}`).value = cellValue(label); wsI.getCell(`B${row}`).value = cellValue(value); };
   kv(4, "Invoice currency", cur);
   kv(5, "Incoterm", input.incoterm);
   kv(6, "VAT deductible (1 = yes, 0 = no)", input.vatDeductible ? 1 : 0);
@@ -76,41 +77,41 @@ export async function buildLandedXlsx(input, result, deps) {
   kv(8, "Flat insurance applies (1 = yes, 0 = no)", result.flatInsurance.applied ? 1 : 0);
   kv(9, "Flat insurance rate (%)", DEFAULTS.flatInsuranceRate);
   const costsOf = (kind) => input.costs.map((c, idx) => (c.kind === kind ? `F${costRow(idx)}` : null)).filter(Boolean).join("+") || "0";
-  kv(10, "Flat insurance base (TRY)", { formula: `ROUND(Calculation!$${L.goods}$${T}-(${costsOf("deduct")})+(${costsOf("freight")}),2)`, result: result.flatInsurance.base });
-  kv(11, "Flat insurance amount (TRY)", { formula: "ROUND(B10*B9/100*B8,2)", result: result.flatInsurance.amountTry });
-  wsI.getCell(`A${RATE_HEAD}`).value = "Currency"; wsI.getCell(`B${RATE_HEAD}`).value = "Rate to TRY";
+  kv(10, "Flat insurance base (TRY)", fx(`ROUND(Calculation!$${L.goods}$${T}-(${costsOf("deduct")})+(${costsOf("freight")}),2)`, result.flatInsurance.base));
+  kv(11, "Flat insurance amount (TRY)", fx("ROUND(B10*B9/100*B8,2)", result.flatInsurance.amountTry));
+  wsI.getCell(`A${RATE_HEAD}`).value = cellValue("Currency"); wsI.getCell(`B${RATE_HEAD}`).value = cellValue("Rate to TRY");
   head(wsI.getCell(`A${RATE_HEAD}`)); head(wsI.getCell(`B${RATE_HEAD}`));
   for (const c of curs) {
-    wsI.getCell(`A${ratesRow[c]}`).value = c;
-    if (input.rates[c] != null) wsI.getCell(`B${ratesRow[c]}`).value = input.rates[c];
+    wsI.getCell(`A${ratesRow[c]}`).value = cellValue(c);
+    if (input.rates[c] != null) wsI.getCell(`B${ratesRow[c]}`).value = cellValue(input.rates[c]);
   }
   ["Cost line", "Type", "Amount", "Currency", "Rate to TRY", "Amount TRY", "Applied", "Allocation key", "VAT %", "VAT (TRY)"].forEach((h, i) => {
-    const c = wsI.getCell(`${colName(i + 1)}${COST_HEAD}`); c.value = h; head(c);
+    const c = wsI.getCell(`${colName(i + 1)}${COST_HEAD}`); c.value = cellValue(h); head(c);
   });
   input.costs.forEach((c, idx) => {
     const r = costRow(idx), out = result.costs[idx];
-    wsI.getCell(`A${r}`).value = c.label;
-    wsI.getCell(`B${r}`).value = KIND_LABEL[c.kind];
-    wsI.getCell(`C${r}`).value = c.amount;
-    wsI.getCell(`D${r}`).value = c.currency;
-    wsI.getCell(`E${r}`).value = c.currency === "TRY" ? 1 : { formula: `B${ratesRow[c.currency]}`, result: rateOf(c.currency) ?? 0 };
-    wsI.getCell(`F${r}`).value = { formula: `ROUND(C${r}*E${r}*G${r},2)`, result: out.amountTry };
-    wsI.getCell(`G${r}`).value = out.applied ? 1 : 0;
-    wsI.getCell(`H${r}`).value = out.applied ? out.usedKey : "included in price";
+    wsI.getCell(`A${r}`).value = cellValue(c.label);
+    wsI.getCell(`B${r}`).value = cellValue(KIND_LABEL[c.kind]);
+    wsI.getCell(`C${r}`).value = cellValue(c.amount);
+    wsI.getCell(`D${r}`).value = cellValue(c.currency);
+    wsI.getCell(`E${r}`).value = cellValue(c.currency === "TRY" ? 1 : fx(`B${ratesRow[c.currency]}`, rateOf(c.currency) ?? 0));
+    wsI.getCell(`F${r}`).value = cellValue(fx(`ROUND(C${r}*E${r}*G${r},2)`, out.amountTry));
+    wsI.getCell(`G${r}`).value = cellValue(out.applied ? 1 : 0);
+    wsI.getCell(`H${r}`).value = cellValue(out.applied ? out.usedKey : "included in price");
     if (c.kind === "local") {
-      wsI.getCell(`I${r}`).value = c.vatRate ?? 0;
-      wsI.getCell(`J${r}`).value = { formula: `ROUND(F${r}*I${r}/100,2)`, result: round((out.amountTry * (c.vatRate || 0)) / 100, 2) };
+      wsI.getCell(`I${r}`).value = cellValue(c.vatRate ?? 0);
+      wsI.getCell(`J${r}`).value = cellValue(fx(`ROUND(F${r}*I${r}/100,2)`, round((out.amountTry * (c.vatRate || 0)) / 100, 2)));
     }
   });
   wsI.getColumn(1).width = 40; wsI.getColumn(2).width = 22;
   for (let i = 3; i <= 10; i++) wsI.getColumn(i).width = 14;
 
   // ---- Calculation ----
-  wsC.getCell("A1").value = "Landed cost - calculation (TRY)"; wsC.getCell("A1").font = { bold: true, size: 13 };
-  wsC.getCell("A2").value = NOTES[0];
+  wsC.getCell("A1").value = cellValue("Landed cost - calculation (TRY)"); wsC.getCell("A1").font = { bold: true, size: 13 };
+  wsC.getCell("A2").value = cellValue(NOTES[0]);
   cols.forEach((c, i) => {
-    const hc = wsC.getCell(4, i + 1); hc.value = c.label; head(hc); hc.alignment = { wrapText: true, vertical: "top" };
-    wsC.getCell(5, i + 1).value = c.key;
+    const hc = wsC.getCell(4, i + 1); hc.value = cellValue(c.label); head(hc); hc.alignment = { wrapText: true, vertical: "top" };
+    wsC.getCell(5, i + 1).value = cellValue(c.key);
     wsC.getColumn(i + 1).width = c.width;
   });
   wsC.getRow(5).hidden = true;
@@ -134,8 +135,8 @@ export async function buildLandedXlsx(input, result, deps) {
 
   result.items.forEach((it, i) => {
     const r = FIRST + i, src = input.items[i];
-    const f = (key, formula, value) => { wsC.getCell(`${L[key]}${r}`).value = { formula, result: value }; };
-    const v = (key, value) => { if (value != null) wsC.getCell(`${L[key]}${r}`).value = value; };
+    const f = (key, formula, value) => { wsC.getCell(`${L[key]}${r}`).value = cellValue(fx(formula, value)); };
+    const v = (key, value) => { if (value != null) wsC.getCell(`${L[key]}${r}`).value = cellValue(value); };
     v("name", src.name); v("qty", src.qty); v("unitPrice", src.unitPrice); v("weightKg", src.weightKg); v("volumeM3", src.volumeM3);
     for (const k of ["dutyRate", "emyRate", "kkdfRate", "otherRate", "otherAmount", "otvRate", "vatRate"]) v(k, src[k]);
     f("goods", `ROUND(${L.qty}${r}*${L.unitPrice}${r}*${cur === "TRY" ? "1" : `Inputs!${rateRef(cur)}`},2)`, it.goods);
@@ -167,20 +168,20 @@ export async function buildLandedXlsx(input, result, deps) {
     f("unitCost", `ROUND(${c("landed")}/${c("qty")},4)`, it.unitCost);
   });
 
-  wsC.getCell(`A${T}`).value = "TOTAL";
+  wsC.getCell(`A${T}`).value = cellValue("TOTAL");
   const sumCols = ["goods", ...Object.keys(shareSrc), "freight", "insurance", "deduct", "local", "localVat", "cif", "duty", "emy", "kkdf", "other", "otv", "vatBase", "vat", "landed"];
   for (const key of sumCols) {
     const col = L[key];
     const own = shares[key] ? round(shares[key].reduce((s, x) => s + x, 0), 2) : result.totals[key];
-    wsC.getCell(`${col}${T}`).value = { formula: `ROUND(SUM(${col}${FIRST}:${col}${LAST}),2)`, result: own };
+    wsC.getCell(`${col}${T}`).value = cellValue(fx(`ROUND(SUM(${col}${FIRST}:${col}${LAST}),2)`, own));
   }
   wsC.getRow(T).font = bold;
   const tc = (k) => `${L[k]}${T}`;
-  const summary = (row, label, formula, value) => { wsC.getCell(`A${row}`).value = label; wsC.getCell(`B${row}`).value = { formula, result: value }; wsC.getCell(`B${row}`).numFmt = MONEY; wsC.getCell(`A${row}`).font = bold; };
+  const summary = (row, label, formula, value) => { wsC.getCell(`A${row}`).value = cellValue(label); wsC.getCell(`B${row}`).value = cellValue(fx(formula, value)); wsC.getCell(`B${row}`).numFmt = MONEY; wsC.getCell(`A${row}`).font = bold; };
   summary(T + 2, "Payable at customs (TRY)", `ROUND(${tc("duty")}+${tc("emy")}+${tc("kkdf")}+${tc("other")}+${tc("otv")}+${tc("vat")},2)`, result.totals.cash);
   summary(T + 3, "Recoverable VAT (TRY)", `ROUND(Inputs!$B$6*(${tc("vat")}+${tc("localVat")}),2)`, result.totals.recoverableVat);
   summary(T + 4, "Landed cost total (TRY)", tc("landed"), result.totals.landed);
-  NOTES.slice(1).forEach((t, i) => { wsC.getCell(`A${T + 6 + i}`).value = t; });
+  NOTES.slice(1).forEach((t, i) => { wsC.getCell(`A${T + 6 + i}`).value = cellValue(t); });
 
   // Sayı biçimleri ve sayfa kurulumu
   cols.forEach((col, i) => {
