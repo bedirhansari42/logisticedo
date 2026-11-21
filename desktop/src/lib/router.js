@@ -32,3 +32,8 @@ export function useRoute() {
 
 export const go = (path) => { location.hash = path.startsWith("#") ? path : `#${path}`; };
 export const href = (path) => `#${path}`;
+
+/** Panel (dashboard) sayfasına döner; geçmişe yeni kayıt eklemez. Girişten sonra eski sayfa (ör. Ayarlar) açılmasın diye. */
+export function resetRoute() {
+  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+}
