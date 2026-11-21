@@ -4,6 +4,7 @@ import { useRoute } from "./lib/router.js";
 import { useLang } from "./lib/i18n.js";
 import { useAutoBackup } from "./backup/scheduler.js";
 import { ConfirmHost } from "./components/ConfirmHost.jsx";
+import { BackupReminder } from "./components/BackupReminder.jsx";
 import { Sidebar } from "./components/Sidebar.jsx";
 import { Dashboard } from "./pages/Dashboard.jsx";
 import { Shipments } from "./pages/Shipments.jsx";
@@ -59,6 +60,7 @@ export default function App() {
         <main className="main"><Pages route={route} /></main>
       </div>
       <ConfirmHost />
+      <BackupReminder />
     </AppProvider>
   );
 }

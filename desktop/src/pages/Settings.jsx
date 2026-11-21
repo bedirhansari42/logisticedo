@@ -1,10 +1,10 @@
 import { useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "@common";
 import { useT, useLang, setLang } from "../lib/i18n.js";
-import { saveBlob } from "../lib/download.js";
 import { Icon, Spinner } from "../components/Icons.jsx";
 import { validateBackup, planRestore } from "../backup/backup.mjs";
-import { exportBackup, collectSnapshot, applyPlan } from "../backup/io.js";
+import { collectSnapshot, applyPlan } from "../backup/io.js";
+import { runManualBackup } from "../backup/manual.js";
 import { getAuto, saveAuto, subscribe, HOURS } from "../backup/auto.mjs";
 import { runAutoBackup } from "../backup/scheduler.js";
 import { useApp } from "../lib/app-context.jsx";
@@ -34,18 +34,7 @@ export function Settings() {
   const doExport = async () => {
     setBusy("export");
     try {
-      const json = JSON.stringify(await exportBackup());
-      const name = `logisticedo-yedek-${new Date().toISOString().slice(0, 10)}.json`;
-      if (api) {
-        const r = await api.saveAs(json, name, auto.dir); // "Farklı kaydet": klasörü kullanıcı seçer
-        if (!r) return; // vazgeçti
-        const now = Date.now();
-        saveAuto({ dir: r.dir, lastAt: now, lastTry: now, lastError: "", lastFile: r.path }); // klasör bundan sonra gösterilir ve otomatik yedekte kullanılır
-        toast(t("d.bk.savedTo", { path: r.path }), "ok", 6000);
-      } else {
-        saveBlob(new Blob([json], { type: "application/json" }), name);
-        toast(t("d.bk.exported"), "ok");
-      }
+      await runManualBackup(t);
     } catch (e) {
       console.error(e);
       toast(t("d.bk.err.fail", { msg: e?.message || String(e) }), "error", 8000);
