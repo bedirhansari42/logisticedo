@@ -48,6 +48,10 @@ body { overflow: hidden; }
 .side-count { margin-left: auto; font-style: normal; font-size: 0.75rem; color: var(--text-4); font-variant-numeric: tabular-nums; }
 .side-bottom { margin-top: auto; display: grid; gap: 12px; }
 .side-lang { justify-self: start; margin-left: 12px; }
+.side-social { display: flex; gap: 4px; margin: 0 4px; } /* kutu içindeki simge 8px içeride: menü simgeleriyle aynı hizaya gelir */
+.side-social a { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: var(--text-4); transition: background-color 0.15s var(--ease), color 0.15s var(--ease); }
+.side-social a:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); }
+.side-social .ico svg { width: 18px; height: 18px; }
 .side-local { display: flex; align-items: flex-start; gap: 8px; margin: 0 12px; font-size: 0.75rem; line-height: 1.4; color: var(--text-4); }
 .side-local .ico svg { width: 15px; height: 15px; margin-top: 1px; color: var(--green-ink); }
 
@@ -56,6 +60,7 @@ body { overflow: hidden; }
 .shell--compact .brand span:not(.ico), .shell--compact .side-label, .shell--compact .side-count, .shell--compact .side-lang { display: none; }
 .shell--compact .side-nav a, .shell--compact .side-link { justify-content: center; padding: 10px; }
 .shell--compact .side-nav, .shell--compact .side-bottom { justify-items: center; }
+.shell--compact .side-social { flex-direction: column; margin: 0; }
 
 /* --- Sayfa ---------------------------------------------------------------- */
 
@@ -329,7 +334,7 @@ body { overflow: hidden; }
   --danger: #c0392b;
   --danger-tint: rgba(192, 57, 43, 0.1);
 }
-:root[data-theme="light"] .side-nav a:hover, :root[data-theme="light"] .side-link:hover,
+:root[data-theme="light"] .side-nav a:hover, :root[data-theme="light"] .side-link:hover, :root[data-theme="light"] .side-social a:hover,
 :root[data-theme="light"] .ed-step:hover, :root[data-theme="light"] .btn--quiet:hover,
 :root[data-theme="light"] .icon-btn--plain:hover, :root[data-theme="light"] .pv-menu button:hover { background: rgba(20, 23, 25, 0.06); }
 :root[data-theme="light"] .btn--ghost:hover { background: rgba(20, 23, 25, 0.05); border-color: rgba(20, 23, 25, 0.3); }
