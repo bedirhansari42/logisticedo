@@ -1,4 +1,4 @@
-/* Koyu / açık tema. Seçim localStorage'da (lgx.theme) tutulur; varsayılan koyu.
+/* Koyu / açık tema. Seçim localStorage'da (lgx.theme) tutulur; varsayılan açık (kayıtlı bir seçimi olan kullanıcı kendi temasını korur).
    <html data-theme="dark|light"> ayarlanır, renkler dash.css'teki belirteçlerden gelir. */
 import { useSyncExternalStore } from "react";
 
@@ -9,9 +9,9 @@ const listeners = new Set();
 export function getTheme() {
   try {
     const v = globalThis.localStorage?.getItem(KEY);
-    return THEMES.includes(v) ? v : "dark";
+    return THEMES.includes(v) ? v : "light";
   } catch {
-    return "dark";
+    return "light";
   }
 }
 

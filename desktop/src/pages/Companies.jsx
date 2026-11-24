@@ -45,7 +45,7 @@ export function Companies() {
     <div className="page">
       <header className="page-head"><div><h1>{t("co.title")}</h1><p className="muted">{t("co.lead")}</p></div></header>
 
-      <div className="co-layout">
+      <div className={`co-layout${draft ? "" : " co-layout--solo"}`}>
         <section className="card-block pad co-list">
           <div className="block-head">
             <h2 className="block-title">{t("co.list")}</h2>

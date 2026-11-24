@@ -18,7 +18,7 @@ desktop/app/
 desktop/dist/
 desktop/public/vendor/
 desktop/public/assets/
-desktop/public/favicon.svg
+desktop/public/favicon.png
 
 # --- Gizli anahtarlar ve sertifikalar (ileride lazım olabilir) ---
 # Servis hesabı anahtarları

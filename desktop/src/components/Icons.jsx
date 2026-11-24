@@ -1,4 +1,5 @@
 import { ICONS } from "@common";
+import logoUrl from "../assets/logo.png";
 
 const P = {
   company: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M3.5 17.5v-13a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v13M11.5 8.5h4a1 1 0 0 1 1 1v8M2.5 17.5h15"/><path d="M6.5 6.5h2M6.5 9.5h2M6.5 12.5h2"/></svg>',
@@ -38,7 +39,7 @@ export function Spinner() { return <span className="spinner" />; }
 export function Brand({ compact = false }) {
   return (
     <a className="brand" href="#/" aria-label="logisticedo">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="bg1" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stopColor="#00827c" /><stop offset="1" stopColor="#cbfffc" /></linearGradient></defs><rect width="32" height="32" rx="8" fill="#2b3034" /><path d="M8 22c3.2-7.4 8.8-11.2 16-11.8" fill="none" stroke="url(#bg1)" strokeWidth="2.4" strokeLinecap="round" /><circle cx="8" cy="22" r="2.8" fill="#cbfffc" /><circle cx="24" cy="10.2" r="2.8" fill="#00827c" stroke="#cbfffc" strokeWidth="1.4" /></svg>
+      <img src={logoUrl} alt="" width="30" height="30" />
       {!compact && <span>logistic<b>edo</b></span>}
     </a>
   );

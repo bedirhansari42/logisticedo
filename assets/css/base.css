@@ -432,7 +432,7 @@ button { cursor: pointer; }
   letter-spacing: -0.02em;
   flex: none;
 }
-.brand svg { width: 28px; height: 28px; }
+.brand svg, .brand img { width: 28px; height: 28px; border-radius: 7px; }
 .brand b { font-weight: 600; color: var(--green-ink); }
 
 .nav {

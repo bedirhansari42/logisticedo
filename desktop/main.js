@@ -67,7 +67,7 @@ function createWindow() {
     height: 900,
     minWidth: 980,
     minHeight: 640,
-    backgroundColor: "#23272b",
+    backgroundColor: "#f3f5f5",
     title: "logisticedo",
     show: false,
     webPreferences: {
