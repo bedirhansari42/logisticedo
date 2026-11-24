@@ -5,7 +5,7 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 
-const KEEP = 10; // otomatik yedeklerden en yeni 10'u saklanır
+const KEEP = 5; // otomatik yedeklerden en yeni 5'i saklanır
 const AUTO_PATTERN = /^logisticedo-otomatik-yedek-\d{4}-\d{2}-\d{2}_\d{4}\.json$/;
 const pad = (n) => String(n).padStart(2, "0");
 

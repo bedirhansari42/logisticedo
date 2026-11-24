@@ -21,7 +21,16 @@ test("rotate keeps the newest N own files and never touches other files", async 
   writeFileSync(path.join(dir, "notes.txt"), "mine");
   await rotate(dir, 2);
   assert.deepEqual(readdirSync(dir).sort(), ["logisticedo-otomatik-yedek-2026-01-04_1000.json", "logisticedo-otomatik-yedek-2026-01-05_1000.json", "logisticedo-yedek-2026-01-01.json", "notes.txt"]);
-  assert.equal(KEEP, 10);
+  assert.equal(KEEP, 5);
+});
+
+test("writeAuto keeps only the newest 5 automatic backups by default", async () => {
+  const dir = tmp();
+  for (let i = 1; i <= 8; i++) await writeAuto(dir, '{"a":' + i + '}', new Date(2026, 10, 13, 9, i));
+  const names = readdirSync(dir).sort();
+  assert.equal(names.length, 5);
+  assert.equal(names[0], "logisticedo-otomatik-yedek-2026-11-13_0904.json");
+  assert.equal(names[4], "logisticedo-otomatik-yedek-2026-11-13_0908.json");
 });
 
 test("writeAuto writes the file atomically and returns its path", async () => {
