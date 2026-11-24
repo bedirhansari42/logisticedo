@@ -95,3 +95,115 @@ test("an untrusted sender gets nothing and triggers no request", async () => {
   assert.equal(calls.fetch, 0);
   assert.deepEqual(calls.open, []);
 });
+
+// ---- Uygulama içinden kurulum (install / apply / cancel) ----
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const crypto = require("node:crypto");
+const { DOWNLOAD_PREFIX } = require("./net-policy.js");
+
+const PKG = Buffer.from("p".repeat(50000) + "end");
+const PKG_SHA = "sha256:" + crypto.createHash("sha256").update(PKG).digest("hex");
+const winName = "logisticedo-Setup-1.2.0-win-x64.exe";
+const macName = "logisticedo-1.2.0-mac-universal.zip";
+const asset = (name, extra = {}) => ({ name, size: PKG.length, digest: PKG_SHA, browser_download_url: `${DOWNLOAD_PREFIX}v1.2.0/${name}`, ...extra });
+const relJson = (assets) => ({ ...good, assets });
+const bodyOf = (buf) => new ReadableStream({ start(c) { c.enqueue(buf); c.close(); } });
+
+function installSetup({ platform = "win32", assets = [asset(winName), asset(macName)], trusted = true, env = {}, applyResult = { ok: true }, pkg = PKG } = {}) {
+  const handlers = {};
+  const events = []; const log = { fetch: [], apply: [], quit: 0 };
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lgx-um-"));
+  const net = { fetch: async (url, init) => {
+    log.fetch.push(url);
+    if (url === "https://x/") return { ok: true, status: 200, json: async () => relJson(assets) };
+    return { ok: true, status: 200, body: bodyOf(pkg) };
+  } };
+  register({
+    ipcMain: { handle: (ch, fn) => { handlers[ch] = fn; } }, isTrusted: () => trusted, app: { getVersion: () => "1.0.0", quit: () => { log.quit++; } },
+    net, shell: { openExternal: async () => {} }, updateUrl: "https://x/", platform, env, pid: 7, execPath: "/x/logisticedo.exe", spawn: () => ({ unref() {} }), tmpRoot,
+    applyUpdate: async (a) => { log.apply.push(a); return applyResult; }
+  });
+  const sender = { send: (ch, p) => { if (ch === "lgx:update:progress") events.push(p); } };
+  const last = () => events.at(-1);
+  const settled = async () => { for (let i = 0; i < 200 && !["ready", "error", "idle"].includes(last()?.state); i++) await new Promise((r) => setTimeout(r, 5)); return last(); };
+  return { handlers, events, log, sender, settled, tmpRoot };
+}
+
+test("install downloads the platform package, verifies it and ends in ready", async () => {
+  const t = installSetup();
+  assert.deepEqual(await t.handlers["lgx:update:install"]({ sender: t.sender }), { ok: true });
+  const end = await t.settled();
+  assert.equal(end.state, "ready");
+  assert.ok(t.log.fetch.includes(`${DOWNLOAD_PREFIX}v1.2.0/${winName}`));
+  assert.ok(!t.log.fetch.some((u) => u.includes(macName)), "only this platform's package");
+});
+
+test("install reports no_asset when the release lacks this platform's package or has no digest", async () => {
+  const a = installSetup({ assets: [asset(macName)] });
+  assert.deepEqual(await a.handlers["lgx:update:install"]({ sender: a.sender }), { ok: false, reason: "no_asset" });
+  const b = installSetup({ assets: [asset(winName, { digest: undefined })] });
+  assert.deepEqual(await b.handlers["lgx:update:install"]({ sender: b.sender }), { ok: false, reason: "digest" });
+  assert.ok(!b.log.fetch.some((u) => u.includes(winName)), "nothing downloaded");
+});
+
+test("a corrupted download ends in error/digest and leaves no file", async () => {
+  const bad = Buffer.from(PKG); bad[3] ^= 1;
+  const t = installSetup({ pkg: bad });
+  await t.handlers["lgx:update:install"]({ sender: t.sender });
+  const end = await t.settled();
+  assert.deepEqual([end.state, end.reason], ["error", "digest"]);
+  assert.equal(fs.existsSync(path.join(t.tmpRoot, "logisticedo-update", winName)), false);
+});
+
+test("portable Windows never installs", async () => {
+  const t = installSetup({ env: { PORTABLE_EXECUTABLE_FILE: "a.exe" } });
+  assert.deepEqual(await t.handlers["lgx:update:install"]({ sender: t.sender }), { ok: false, reason: "portable" });
+  assert.equal(t.log.fetch.length, 0);
+});
+
+test("apply before ready is refused and does nothing; after ready it applies and quits", async () => {
+  const t = installSetup();
+  assert.deepEqual(await t.handlers["lgx:update:apply"]({ sender: t.sender }), { ok: false, reason: "unknown" });
+  assert.equal(t.log.apply.length, 0);
+  await t.handlers["lgx:update:install"]({ sender: t.sender }); await t.settled();
+  assert.deepEqual(await t.handlers["lgx:update:apply"]({ sender: t.sender }), { ok: true });
+  assert.equal(t.log.apply.length, 1);
+  assert.equal(t.log.apply[0].platform, "win32");
+  assert.equal(t.log.apply[0].file, path.join(t.tmpRoot, "logisticedo-update", winName));
+  assert.equal(t.log.quit, 1);
+});
+
+test("a failed apply does not quit the app and reports the reason", async () => {
+  const t = installSetup({ applyResult: { ok: false, reason: "not_writable" } });
+  await t.handlers["lgx:update:install"]({ sender: t.sender }); await t.settled();
+  assert.deepEqual(await t.handlers["lgx:update:apply"]({ sender: t.sender }), { ok: false, reason: "not_writable" });
+  assert.equal(t.log.quit, 0);
+});
+
+test("a second install while downloading does not start another download; cancel returns to idle", async () => {
+  const t = installSetup();
+  await t.handlers["lgx:update:install"]({ sender: t.sender });
+  await t.handlers["lgx:update:install"]({ sender: t.sender });
+  await t.settled();
+  assert.equal(t.log.fetch.filter((u) => u.includes(winName)).length, 1);
+  assert.equal(await t.handlers["lgx:update:cancel"]({ sender: t.sender }), true);
+  assert.equal(t.events.at(-1).state, "idle");
+  assert.deepEqual(await t.handlers["lgx:update:apply"]({ sender: t.sender }), { ok: false, reason: "unknown" });
+});
+
+test("an untrusted sender cannot install, apply or cancel", async () => {
+  const t = installSetup({ trusted: false });
+  assert.equal((await t.handlers["lgx:update:install"]({ sender: t.sender })).ok, false);
+  assert.equal((await t.handlers["lgx:update:apply"]({ sender: t.sender })).ok, false);
+  assert.equal(await t.handlers["lgx:update:cancel"]({ sender: t.sender }), false);
+  assert.equal(t.log.fetch.length, 0);
+});
+
+test("install ignores any argument: the renderer cannot choose the package", async () => {
+  const t = installSetup();
+  await t.handlers["lgx:update:install"]({ sender: t.sender }, "https://evil.com/x.exe");
+  await t.settled();
+  assert.ok(t.log.fetch.every((u) => u === "https://x/" || u.startsWith(DOWNLOAD_PREFIX)));
+});

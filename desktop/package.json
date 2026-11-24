@@ -40,11 +40,15 @@
       "preload.js",
       "backup-main.js",
       "update-main.js",
+      "update-assets.js",
+      "update-download.js",
+      "update-apply.js",
       "net-policy.js",
       "package.json",
       "app/**/*"
     ],
     "asar": true,
+    "afterSign": "scripts/adhoc-sign.cjs",
     "mac": {
       "category": "public.app-category.business",
       "target": [

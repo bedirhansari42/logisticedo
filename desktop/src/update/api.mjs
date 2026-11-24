@@ -33,6 +33,27 @@ export async function openRelease(url) {
   try { return (await api.open(url)) === true; } catch { return false; }
 }
 
+// ---- Uygulama içinden kurulum. Hiçbiri fırlatmaz; köprü yoksa ya da eskiyse sessizce başarısız olur. ----
+const FAIL = { ok: false, reason: "unknown" };
+const norm = (r) => (r && typeof r === "object" && typeof r.ok === "boolean" ? (r.ok ? { ok: true } : { ok: false, reason: typeof r.reason === "string" ? r.reason : "unknown" }) : FAIL);
+
+export const canUseInstall = () => typeof updateApi()?.install === "function";
+
+async function call(name) {
+  const api = updateApi();
+  if (typeof api?.[name] !== "function") return FAIL;
+  try { return norm(await api[name]()); } catch { return FAIL; }
+}
+export const startInstall = () => call("install");
+export const applyInstall = () => call("apply");
+export async function cancelInstall() {
+  try { return (await updateApi()?.cancel?.()) === true; } catch { return false; }
+}
+/** Köprüden ilerleme olaylarını dinler; dönen işlev aboneliği bırakır. */
+export function onInstallProgress(cb) {
+  try { const off = updateApi()?.onProgress?.(cb); return typeof off === "function" ? off : () => {}; } catch { return () => {}; }
+}
+
 /** Yüklü uygulamanın sürümü: önce derleme sürümü, köprü varsa ana sürecin (app.getVersion) cevabı. */
 export function useAppVersion() {
   const [v, setV] = useState(typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "");

@@ -1,5 +1,5 @@
 "use strict";
-/* Renderer'a yalnızca yedekleme (üç işlev) ve güncelleme kontrolü (üç işlev) için dar köprüler verir; Node/Electron'a başka erişim yok. */
+/* Renderer'a yalnızca yedekleme (üç işlev) ve güncelleme (kontrol, kurulum) için için dar köprüler verir; Node/Electron'a başka erişim yok. */
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("lgxBackup", {
@@ -12,5 +12,14 @@ contextBridge.exposeInMainWorld("lgxBackup", {
 contextBridge.exposeInMainWorld("lgxUpdate", {
   version: () => ipcRenderer.invoke("lgx:update:version"),
   check: () => ipcRenderer.invoke("lgx:update:check"),
-  open: (url) => ipcRenderer.invoke("lgx:update:open", url)
+  open: (url) => ipcRenderer.invoke("lgx:update:open", url),
+  // Uygulama içinden kurulum: renderer adres vermez, yalnızca başlat / uygula / iptal der
+  install: () => ipcRenderer.invoke("lgx:update:install"),
+  apply: () => ipcRenderer.invoke("lgx:update:apply"),
+  cancel: () => ipcRenderer.invoke("lgx:update:cancel"),
+  onProgress: (cb) => {
+    const h = (_e, p) => cb(p);
+    ipcRenderer.on("lgx:update:progress", h);
+    return () => ipcRenderer.removeListener("lgx:update:progress", h);
+  }
 });
