@@ -2,7 +2,7 @@
 
 Lojistikçiler için ücretsiz belge araçları. Kişisel portfolyo projesi olarak geliştirildi ve herkesin kullanımına açıktır. Bir proforma faturayı okur, kendi antetli kağıdınızda ihracat belgelerini üretir (PDF ve formüllü Excel). macOS ve Windows masaüstü uygulaması olarak ve tarayıcıda çalışan web sürümü olarak gelir.
 
-**Gizlilik:** Her şey bilgisayarınızda işlenir. Dosyalarınız hiçbir sunucuya gönderilmez. Masaüstü uygulaması dışarıya giden tüm ağ isteklerini engeller. Hesap, giriş ya da reklam yoktur.
+**Gizlilik:** Her şey bilgisayarınızda işlenir. Dosyalarınız hiçbir sunucuya gönderilmez. Masaüstü uygulaması yalnızca yeni sürüm kontrolü için GitHub'a istek gönderir (açılışta ve 24 saatte bir; yalnızca en son sürüm numarasını okur, otomatik kontrol Ayarlar'dan kapatılabilir). Belgeleriniz ve verileriniz hiçbir yere gönderilmez, başka hiçbir ağ isteği yapılmaz. Hesap, giriş ya da reklam yoktur.
 
 ## Neler yapar
 

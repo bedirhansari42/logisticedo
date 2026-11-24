@@ -5,6 +5,7 @@ import { useLang } from "./lib/i18n.js";
 import { useAutoBackup } from "./backup/scheduler.js";
 import { ConfirmHost } from "./components/ConfirmHost.jsx";
 import { BackupReminder } from "./components/BackupReminder.jsx";
+import { UpdateNotice } from "./components/UpdateNotice.jsx";
 import { Sidebar } from "./components/Sidebar.jsx";
 import { Dashboard } from "./pages/Dashboard.jsx";
 import { Shipments } from "./pages/Shipments.jsx";
@@ -61,6 +62,7 @@ export default function App() {
       </div>
       <ConfirmHost />
       <BackupReminder />
+      <UpdateNotice />
     </AppProvider>
   );
 }

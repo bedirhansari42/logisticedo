@@ -62,9 +62,13 @@ desktop/
 
 ## Güvenlik ve gizlilik
 
-- Uygulama dışına giden **her ağ isteği engellenir** (`main.js` → `lockNetwork`). "Dosyalar cihazdan çıkmaz" vaadi uygulama düzeyinde zorlanır.
+- Uygulama dışına giden ağ istekleri **engellenir** (`main.js` → `lockNetwork`); tek istisna, yeni sürüm kontrolü için GitHub'ın "en son release" adresidir (`net-policy.js`: tam eşleşme, yalnızca GET, yalnızca ana süreçten; sayfa kodu bu adrese de istek gönderemez). "Dosyalar cihazdan çıkmaz" vaadi uygulama düzeyinde zorlanır.
 - Veriler kullanıcının bilgisayarında tutulur (macOS: `~/Library/Application Support/logisticedo`, Windows: `%APPDATA%\logisticedo`).
 - PDF/Excel indirmelerinde işletim sisteminin "Farklı kaydet" penceresi açılır.
+
+## Güncelleme bildirimi
+
+Uygulama açıldıktan 3 saniye sonra (sonra 24 saatte bir) GitHub'daki en son **kararlı** release'e bakar (ön sürümler `-rc/-beta/-alpha` sayılmaz). Yüklü sürümden yeniyse "İndir / Sonra / Bu sürümü atla" penceresi çıkar; "İndir" release sayfasını tarayıcıda açar, kendiliğinden kurulum yoktur. Ayarlar → Güncellemeler'den kapatılabilir ve elle denetlenebilir. İstek ana süreçten yapılır (`update-main.js`), karar mantığı `src/update/*.mjs` içindedir. Testler: `npm run test:update` ve `npm run test:net`. Geliştirmede `LGX_UPDATE_URL=http://localhost:8799/latest.json npm run electron` sahte bir release sunucusuna bakar; paketli uygulamada bu değişken etkisizdir.
 
 ## Test modu
 

@@ -8,6 +8,8 @@ import { runManualBackup } from "../backup/manual.js";
 import { getAuto, saveAuto, subscribe, HOURS } from "../backup/auto.mjs";
 import { runAutoBackup } from "../backup/scheduler.js";
 import { useApp } from "../lib/app-context.jsx";
+import { updateApi, checkForUpdate, openRelease, useAppVersion } from "../update/api.mjs";
+import { isEnabled, setEnabled } from "../update/state.mjs";
 
 export function Settings() {
   const t = useT();
@@ -17,6 +19,12 @@ export function Settings() {
   const fileRef = useRef(null);
   const auto = useSyncExternalStore(subscribe, getAuto);
   const api = typeof window !== "undefined" ? window.lgxBackup : null; // yalnızca masaüstü uygulamasında var
+  const version = useAppVersion();
+  const updApi = updateApi(); // yalnızca masaüstü uygulamasında var
+  const [updOn, setUpdOn] = useState(isEnabled);
+  const [upd, setUpd] = useState(null); // null | "checking" | { status, latest? }
+  const toggleUpd = () => { setEnabled(!updOn); setUpdOn(!updOn); };
+  const checkNow = async () => { setUpd("checking"); setUpd(await checkForUpdate({ manual: true })); };
   const when = (ms) => new Date(ms).toLocaleString(lang === "tr" ? "tr-TR" : "en-GB", { dateStyle: "short", timeStyle: "short" });
 
   const pickFolder = async () => {
@@ -106,10 +114,32 @@ export function Settings() {
           <input ref={fileRef} className="visually-hidden" type="file" accept=".json,application/json" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) doImport(f); }} />
         </div>
       </section>
+      {updApi && (
+        <section className="card-block pad">
+          <h2 className="block-title">{t("d.set.updates")}</h2>
+          <div className="bk-auto">
+            <button type="button" role="switch" aria-checked={updOn} aria-label={t("d.set.updatesCheck")} className="switch" onClick={toggleUpd} />
+            <span>{t("d.set.updatesCheck")}</span>
+          </div>
+          <p className="muted pl-hint">{t("d.set.updatesNote")}</p>
+          <div className="lc-downloads">
+            <button type="button" className="btn btn--ghost btn--sm" onClick={checkNow} disabled={upd === "checking"}>
+              {upd === "checking" ? <><Spinner />{t("d.set.checking")}</> : t("d.set.checkNow")}
+            </button>
+          </div>
+          {upd && upd !== "checking" && upd.status === "current" && <p className="muted">{t("d.set.upToDate")}</p>}
+          {upd && upd !== "checking" && upd.status === "newer" && (
+            <p>{t("d.set.newVersion", { v: `v${upd.latest.version}` })}{" "}
+              <button type="button" className="btn btn--primary btn--sm" onClick={() => openRelease(upd.latest.url)}>{t("d.upd.download")}</button>
+            </p>
+          )}
+          {upd && upd !== "checking" && upd.status === "error" && <p className="warn-text">{t("d.set.checkFail")}</p>}
+        </section>
+      )}
       <section className="card-block pad">
         <h2 className="block-title">{t("d.set.about")}</h2>
         <dl className="kv">
-          <div><dt>{t("d.set.version")}</dt><dd>{__APP_VERSION__}</dd></div>
+          <div><dt>{t("d.set.version")}</dt><dd>{version}</dd></div>
           <div><dt>{t("d.set.license")}</dt><dd>{t("d.set.licenseValue")}</dd></div>
         </dl>
       </section>

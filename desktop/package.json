@@ -23,7 +23,8 @@
     "test:proforma": "node --test src/proforma/*.test.mjs",
     "test:backup": "node --test src/backup/*.test.mjs",
     "test:notes": "node --test src/notes/*.test.mjs",
-    "test:net": "node --test *.test.js"
+    "test:net": "node --test *.test.js",
+    "test:update": "node --test src/update/*.test.mjs"
   },
   "build": {
     "appId": "com.logisticedo.desktop",
@@ -37,6 +38,7 @@
       "main.js",
       "preload.js",
       "backup-main.js",
+      "update-main.js",
       "net-policy.js",
       "package.json",
       "app/**/*"

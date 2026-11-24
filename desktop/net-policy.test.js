@@ -1,6 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { isAllowed, isTrustedUrl, isTrustedSender } = require("./net-policy.js");
+const { isAllowed, isTrustedUrl, isTrustedSender, isReleaseUrl, UPDATE_API_URL } = require("./net-policy.js");
 
 const o = { scheme: "app", devUrl: null };
 
@@ -56,4 +56,47 @@ test("isTrustedSender: trusted URL and top-level frame only", () => {
   assert.equal(isTrustedSender({ senderFrame: null }, T), false);
   assert.equal(isTrustedSender({}, T), false);
   assert.equal(isTrustedSender(undefined, T), false);
+});
+
+const g = { ...o, method: "GET", fromRenderer: false }; // ana süreçten gelen GET isteği
+
+test("only the exact GitHub latest-release API URL is allowed for the update check", () => {
+  assert.equal(isAllowed(UPDATE_API_URL, g), true);
+  for (const u of [
+    UPDATE_API_URL + "?x=1",
+    "https://api.github.com/repos/bedirhansari42/logisticedo/releases",
+    "https://api.github.com/repos/baska/repo/releases/latest",
+    "http://api.github.com/repos/bedirhansari42/logisticedo/releases/latest",
+    "https://api.github.com.evil.com/repos/bedirhansari42/logisticedo/releases/latest"
+  ]) assert.equal(isAllowed(u, g), false, u);
+});
+
+test("the update URL is for GET requests from the main process only: never POST, never the page", () => {
+  assert.equal(isAllowed(UPDATE_API_URL, { ...g, method: "POST" }), false);
+  assert.equal(isAllowed(UPDATE_API_URL, { ...g, method: "PUT" }), false);
+  assert.equal(isAllowed(UPDATE_API_URL, { ...g, fromRenderer: true }), false);
+  assert.equal(isAllowed(UPDATE_API_URL, o), false); // method/fromRenderer belirtilmezse reddedilir (güvenli varsayılan)
+});
+
+test("a custom updateUrl (development override) allows only that exact URL", () => {
+  const c = { ...g, updateUrl: "http://localhost:8799/latest.json" };
+  assert.equal(isAllowed("http://localhost:8799/latest.json", c), true);
+  assert.equal(isAllowed("http://localhost:8799/latest.json", { ...c, method: "POST" }), false);
+  assert.equal(isAllowed("http://localhost:8799/other.json", c), false);
+  assert.equal(isAllowed(UPDATE_API_URL, c), false);
+});
+
+test("isReleaseUrl accepts only this repo's releases pages on github.com over https", () => {
+  for (const u of ["https://github.com/bedirhansari42/logisticedo/releases/tag/v1.2.0", "https://github.com/bedirhansari42/logisticedo/releases"])
+    assert.equal(isReleaseUrl(u), true, u);
+  for (const u of [
+    "https://github.com/bedirhansari42/logisticedo",
+    "https://github.com/baska/logisticedo/releases/tag/v1",
+    "https://github.com.evil.com/bedirhansari42/logisticedo/releases",
+    "http://github.com/bedirhansari42/logisticedo/releases",
+    "https://evil.com/bedirhansari42/logisticedo/releases",
+    "https://user@github.com/bedirhansari42/logisticedo/releases",
+    "https://github.com:8443/bedirhansari42/logisticedo/releases",
+    "not a url", "", null, undefined
+  ]) assert.equal(isReleaseUrl(u), false, String(u));
 });

@@ -2,7 +2,7 @@
 const { app, BrowserWindow, Menu, protocol, net, shell, session, dialog, ipcMain } = require("electron");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
-const { isAllowed, isTrustedUrl, isTrustedSender } = require("./net-policy.js");
+const { isAllowed, isTrustedUrl, isTrustedSender, UPDATE_API_URL } = require("./net-policy.js");
 
 // Uygulama adı: menü çubuğu, Hakkında penceresi ve Dock bu adı kullanır
 app.setName("logisticedo");
@@ -12,6 +12,8 @@ const HOST = "logisticedo";
 const ROOT = path.join(__dirname, "app");
 // Geliştirme: ELECTRON_START_URL=http://localhost:5173 electron .  (Vite sunucusunu açar, ağ kilidi yalnızca bu adrese izin verir)
 const DEV_URL = process.env.ELECTRON_START_URL || null;
+// Sürüm kontrolü adresi. LGX_UPDATE_URL yalnızca paketlenmemiş (geliştirme) derlemede geçerlidir.
+const UPDATE_URL = (!app.isPackaged && process.env.LGX_UPDATE_URL) || UPDATE_API_URL;
 
 // ES modülleri ve IndexedDB file:// üzerinde güvenilir çalışmaz; kalıcı, güvenli bir kaynak (origin) için
 // özel bir protokol kullanılır. Antetler bu origin'in IndexedDB'sinde kalır.
@@ -50,11 +52,11 @@ async function serveFile(request) {
   }
 }
 
-// "Dosyalar cihazdan çıkmaz" vaadini uygulama düzeyinde zorla: uygulama dışına hiçbir ağ isteği gitmez
-// (karar net-policy.js'de, testli).
+// "Dosyalar cihazdan çıkmaz" vaadini uygulama düzeyinde zorla: uygulama dışına yalnızca sürüm kontrolü için
+// tek bir GitHub adresi açıktır (karar net-policy.js'de, testli).
 function lockNetwork(ses) {
   ses.webRequest.onBeforeRequest((details, cb) => {
-    cb({ cancel: !isAllowed(details.url, { scheme: SCHEME, devUrl: DEV_URL }) });
+    cb({ cancel: !isAllowed(details.url, { scheme: SCHEME, devUrl: DEV_URL, updateUrl: UPDATE_URL, method: details.method, fromRenderer: details.webContentsId != null }) });
   });
 }
 
@@ -126,6 +128,10 @@ app.whenReady().then(() => {
   require("./backup-main.js").register({
     dialog, ipcMain, getWindow: () => win, testDir: process.env.LGX_TEST_DIR || null,
     // yalnızca kendi sayfamızdan gelen istekler (uygulama protokolü ya da geliştirme sunucusu)
+    isTrusted: (e) => isTrustedSender(e, { scheme: SCHEME, host: HOST, devUrl: DEV_URL })
+  });
+  require("./update-main.js").register({
+    ipcMain, app, net, shell, updateUrl: UPDATE_URL,
     isTrusted: (e) => isTrustedSender(e, { scheme: SCHEME, host: HOST, devUrl: DEV_URL })
   });
   protocol.handle(SCHEME, serveFile);
