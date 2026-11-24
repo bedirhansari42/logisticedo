@@ -372,6 +372,7 @@ body { overflow: hidden; }
 .dialog--confirm .dialog-inner { grid-template-rows: auto auto auto; }
 .dialog--confirm .dialog-head { border-bottom: 0; padding-bottom: 6px; }
 .dialog--confirm .dialog-head h2 { font-size: 1.125rem; }
+.upd-progress { display: block; width: calc(100% - 44px); margin: 0 22px 20px; height: 8px; accent-color: var(--accent, #00827c); }
 .dialog-msg { margin: 0; padding: 4px 22px 20px; color: var(--text-3); line-height: 1.5; }
 .dialog--confirm .dialog-foot { border-top: 0; padding-top: 0; }
 

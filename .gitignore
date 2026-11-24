@@ -34,3 +34,6 @@ serviceAccount*.json
 
 # Taslak (brainstorm) çıktıları
 .superpowers/
+
+# Eski Firebase yapılandırması (silindi; geri eklenmesin)
+auth-config.json

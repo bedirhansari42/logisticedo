@@ -62,6 +62,24 @@ test("a bridge error flag or a thrown error becomes status error and never throw
   assert.equal((await checkForUpdate()).status, "error");
 });
 
+test("the failure reason is passed on (allowlisted); anything unexpected becomes unknown", async () => {
+  for (const reason of ["rate_limit", "not_found", "network"]) {
+    reset();
+    bridge({ current: "1.0.0", latest: null, error: true, reason });
+    assert.equal((await checkForUpdate()).reason, reason, reason);
+  }
+  for (const reason of ["<script>", 42, undefined, null]) {
+    reset();
+    bridge({ current: "1.0.0", latest: null, error: true, reason });
+    const r = await checkForUpdate();
+    assert.equal(r.status, "error");
+    assert.equal(r.reason, "unknown", String(reason));
+  }
+  reset();
+  bridge(new Error("ipc closed"));
+  assert.equal((await checkForUpdate()).reason, "unknown");
+});
+
 test("openRelease forwards the URL and reports the bridge's answer", async () => {
   reset();
   const calls = bridge(res("v1.1.0"));
@@ -70,4 +88,38 @@ test("openRelease forwards the URL and reports the bridge's answer", async () =>
   assert.deepEqual(calls.open, [REL, "https://evil.com/"]);
   reset();
   assert.equal(await openRelease(REL), false);
+});
+
+const { startInstall, applyInstall, cancelInstall, onInstallProgress, canUseInstall } = await import("./api.mjs");
+
+test("install calls never throw and fail closed without the bridge or with an older bridge", async () => {
+  reset();
+  assert.deepEqual(await startInstall(), { ok: false, reason: "unknown" });
+  assert.deepEqual(await applyInstall(), { ok: false, reason: "unknown" });
+  assert.equal(await cancelInstall(), false);
+  assert.equal(typeof onInstallProgress(() => {}), "function");
+  assert.equal(canUseInstall(), false);
+  globalThis.window.lgxUpdate = { version: async () => "1", check: async () => ({}), open: async () => true }; // eski köprü
+  assert.equal(canUseInstall(), false);
+  assert.deepEqual(await startInstall(), { ok: false, reason: "unknown" });
+});
+
+test("install calls pass through the bridge, normalise odd answers and unsubscribe works", async () => {
+  reset();
+  let cb; let off = 0;
+  globalThis.window.lgxUpdate = {
+    install: async () => ({ ok: true }), apply: async () => ({ ok: false, reason: "not_writable" }), cancel: async () => true,
+    onProgress: (f) => { cb = f; return () => { off++; }; }
+  };
+  assert.equal(canUseInstall(), true);
+  assert.deepEqual(await startInstall(), { ok: true });
+  assert.deepEqual(await applyInstall(), { ok: false, reason: "not_writable" });
+  assert.equal(await cancelInstall(), true);
+  const seen = []; const un = onInstallProgress((p) => seen.push(p));
+  cb({ state: "ready" }); un();
+  assert.deepEqual(seen, [{ state: "ready" }]); assert.equal(off, 1);
+  globalThis.window.lgxUpdate.install = async () => "weird";
+  assert.deepEqual(await startInstall(), { ok: false, reason: "unknown" });
+  globalThis.window.lgxUpdate.install = async () => { throw new Error("x"); };
+  assert.deepEqual(await startInstall(), { ok: false, reason: "unknown" });
 });

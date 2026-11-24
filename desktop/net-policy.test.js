@@ -1,6 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { isAllowed, isTrustedUrl, isTrustedSender, isReleaseUrl, UPDATE_API_URL } = require("./net-policy.js");
+const { isAllowed, isTrustedUrl, isTrustedSender, isReleaseUrl, UPDATE_API_URL, DOWNLOAD_PREFIX } = require("./net-policy.js");
 
 const o = { scheme: "app", devUrl: null };
 
@@ -99,4 +99,33 @@ test("isReleaseUrl accepts only this repo's releases pages on github.com over ht
     "https://github.com:8443/bedirhansari42/logisticedo/releases",
     "not a url", "", null, undefined
   ]) assert.equal(isReleaseUrl(u), false, String(u));
+});
+
+const main = { ...o, method: "GET", fromRenderer: false };
+const ASSET = DOWNLOAD_PREFIX + "v1.1.0/logisticedo-Setup-1.1.0-win-x64.exe";
+
+test("release downloads and GitHub's asset hosts are open only to main-process GETs", () => {
+  for (const u of [ASSET, "https://release-assets.githubusercontent.com/x?y=1", "https://objects.githubusercontent.com/x"])
+    assert.equal(isAllowed(u, main), true, u);
+});
+
+test("downloads are refused for pages, other methods, http, other repos and look-alike hosts", () => {
+  for (const u of [ASSET, "https://release-assets.githubusercontent.com/x", "https://objects.githubusercontent.com/x"]) {
+    assert.equal(isAllowed(u, { ...main, fromRenderer: true }), false, "renderer " + u);
+    assert.equal(isAllowed(u, { ...main, method: "POST" }), false, "POST " + u);
+    assert.equal(isAllowed(u, o), false, "no method " + u);
+  }
+  for (const u of [
+    ASSET.replace("https:", "http:"),
+    "http://objects.githubusercontent.com/x",
+    "https://github.com/baska/repo/releases/download/v1/a.exe",
+    "https://release-assets.githubusercontent.com.evil.com/x",
+    "https://evilobjects.githubusercontent.com/x"
+  ]) assert.equal(isAllowed(u, main), false, u);
+});
+
+test("a test downloadPrefix replaces the default prefix", () => {
+  const t = { ...main, downloadPrefix: "http://localhost:8799/dl/" };
+  assert.equal(isAllowed("http://localhost:8799/dl/v1/a.zip", t), true);
+  assert.equal(isAllowed(ASSET, t), false);
 });

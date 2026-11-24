@@ -4,18 +4,27 @@
 const REPO = "bedirhansari42/logisticedo";
 const UPDATE_API_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
 
+// Güncelleme paketi: yalnızca bu deponun release dosyaları ve GitHub'ın dosya sunucularına yönlendirme.
+const DOWNLOAD_PREFIX = `https://github.com/${REPO}/releases/download/`;
+const ASSET_HOSTS = ["release-assets.githubusercontent.com", "objects.githubusercontent.com"];
+
 const parse = (u) => { try { return new URL(u); } catch { return null; } };
 // Önek eşlemesi değil, ayrıştırılmış adres karşılaştırılır: "localhost:5173.evil.com" gibi benzer adresler eşleşmez.
 const sameHost = (url, other) => { const a = parse(url), b = parse(other); return !!a && !!b && a.protocol === b.protocol && a.host === b.host; };
 
 /** method ve fromRenderer (isteği bir sayfa mı yaptı, yoksa ana süreç mi) verilmezse güncelleme adresi reddedilir. */
-function isAllowed(url, { scheme, devUrl, updateUrl = UPDATE_API_URL, method, fromRenderer }) {
+function isAllowed(url, { scheme, devUrl, updateUrl = UPDATE_API_URL, downloadPrefix = DOWNLOAD_PREFIX, method, fromRenderer }) {
   if (url.startsWith(scheme + "://")) return true;
   if (devUrl && sameHost(url, devUrl)) return true;
   if (devUrl) { const w = parse(url); if (w && w.protocol === "ws:" && w.hostname === "localhost") return true; }
   if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("devtools:") || url.startsWith("file:")) return true;
   // Sürüm kontrolü: yalnızca ana sürecin yaptığı GET isteği; sayfa kodu bu adrese hiçbir şey gönderemez.
-  return url === updateUrl && method === "GET" && fromRenderer === false;
+  if (method !== "GET" || fromRenderer !== false) return false;
+  if (url === updateUrl) return true;
+  // Paket indirme: yalnızca ana süreç, GET; önek tam başlangıç eşlemesi, yönlendirme sunucusu ayrıştırılmış ana bilgisayarla.
+  if (url.startsWith(downloadPrefix)) return true;
+  const u = parse(url);
+  return !!u && u.protocol === "https:" && ASSET_HOSTS.includes(u.host);
 }
 
 /** "İndir" yalnızca bu deponun release sayfalarını açabilir (https, github.com, kimlik bilgisi ve port yok). */
@@ -41,4 +50,4 @@ function isTrustedSender(event, opts) {
   return isTrustedUrl(f.url || "", opts);
 }
 
-module.exports = { isAllowed, isTrustedUrl, isTrustedSender, isReleaseUrl, REPO, UPDATE_API_URL };
+module.exports = { isAllowed, isTrustedUrl, isTrustedSender, isReleaseUrl, REPO, UPDATE_API_URL, DOWNLOAD_PREFIX, ASSET_HOSTS };

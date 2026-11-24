@@ -8,7 +8,7 @@ import { runManualBackup } from "../backup/manual.js";
 import { getAuto, saveAuto, subscribe, HOURS } from "../backup/auto.mjs";
 import { runAutoBackup } from "../backup/scheduler.js";
 import { useApp } from "../lib/app-context.jsx";
-import { updateApi, checkForUpdate, openRelease, useAppVersion } from "../update/api.mjs";
+import { updateApi, checkForUpdate, canUseInstall, useAppVersion } from "../update/api.mjs";
 import { isEnabled, setEnabled } from "../update/state.mjs";
 import { tourEvent } from "../tour/store.mjs";
 import { go } from "../lib/router.js";
@@ -139,10 +139,10 @@ export function Settings() {
           {upd && upd !== "checking" && upd.status === "current" && <p className="muted">{t("d.set.upToDate")}</p>}
           {upd && upd !== "checking" && upd.status === "newer" && (
             <p>{t("d.set.newVersion", { v: `v${upd.latest.version}` })}{" "}
-              <button type="button" className="btn btn--primary btn--sm" onClick={() => openRelease(upd.latest.url)}>{t("d.upd.download")}</button>
+              <button type="button" className="btn btn--primary btn--sm" onClick={() => window.dispatchEvent(new CustomEvent("lgx:update:show", { detail: { version: upd.latest.version, url: upd.latest.url, current: upd.current } }))}>{canUseInstall() ? t("d.upd.install") : t("d.upd.download")}</button>
             </p>
           )}
-          {upd && upd !== "checking" && upd.status === "error" && <p className="warn-text">{t("d.set.checkFail")}</p>}
+          {upd && upd !== "checking" && upd.status === "error" && <p className="warn-text">{t(`d.set.checkFail.${upd.reason}`)}</p>}
         </section>
       )}
       <section className="card-block pad">
