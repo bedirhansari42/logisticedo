@@ -2,7 +2,7 @@ import { useT, useLang, setLang } from "../lib/i18n.js";
 import { useApp } from "../lib/app-context.jsx";
 import { useTheme, toggleTheme } from "../lib/theme.js";
 import { Brand, Icon } from "./Icons.jsx";
-import { SOCIAL } from "../lib/social.js";
+import { SOCIAL, CREDIT } from "../lib/social.js";
 
 const NAV = [
   ["dashboard", "/", "dashboard", "d.nav.dashboard"],
@@ -45,11 +45,14 @@ export function Sidebar({ route }) {
         ))}
       </nav>
       <div className="side-bottom">
-        <nav className="side-social" aria-label="Social">
-          {SOCIAL.filter((x) => /^https?:\/\//i.test(x.url)).map((x) => (
-            <a key={x.key} href={x.url} target="_blank" rel="noopener noreferrer" title={x.label} aria-label={x.label}><Icon name={x.key} /></a>
-          ))}
-        </nav>
+        <div className="side-credit-wrap">
+          <p className="side-credit side-label">{CREDIT}</p>
+          <nav className="side-social" aria-label="Social">
+            {SOCIAL.filter((x) => /^https?:\/\//i.test(x.url)).map((x) => (
+              <a key={x.key} href={x.url} target="_blank" rel="noopener noreferrer" title={x.label} aria-label={x.label}><Icon name={x.key} /></a>
+            ))}
+          </nav>
+        </div>
         <button type="button" className="side-link side-theme" onClick={toggleTheme} title={themeLabel} aria-label={themeLabel}>
           <Icon name={theme === "dark" ? "sun" : "moon"} /><span className="side-label">{themeLabel}</span>
         </button>
