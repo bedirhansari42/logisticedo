@@ -16,14 +16,21 @@ function parseRelease(json) {
   return { tag, url };
 }
 
+/** Hata + nedeni: rate_limit (GitHub 403/429) | not_found (404) | network (bağlantı/zaman aşımı) | unknown. Arayüz yalnızca bu etiketi görür. */
+const fail = (reason, message) => Object.assign(new Error(message), { reason });
+
 async function fetchLatest(fetchFn, url, timeoutMs = TIMEOUT_MS) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const res = await fetchFn(url, { headers: { Accept: "application/vnd.github+json" }, cache: "no-store", signal: ctrl.signal });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const latest = parseRelease(await res.json());
-    if (!latest) throw new Error("unexpected release data");
+    let res;
+    try {
+      res = await fetchFn(url, { headers: { Accept: "application/vnd.github+json" }, cache: "no-store", signal: ctrl.signal });
+    } catch (e) { throw fail("network", e.message); } // bağlantı yok, DNS, zaman aşımı
+    if (!res.ok) throw fail(res.status === 403 || res.status === 429 ? "rate_limit" : res.status === 404 ? "not_found" : "unknown", `HTTP ${res.status}`);
+    let latest;
+    try { latest = parseRelease(await res.json()); } catch (e) { throw fail("unknown", e.message); }
+    if (!latest) throw fail("unknown", "unexpected release data");
     return latest;
   } finally { clearTimeout(timer); }
 }
@@ -31,12 +38,12 @@ async function fetchLatest(fetchFn, url, timeoutMs = TIMEOUT_MS) {
 function register({ ipcMain, isTrusted, app, net, shell, updateUrl }) {
   ipcMain.handle("lgx:update:version", (e) => (isTrusted(e) ? app.getVersion() : ""));
   ipcMain.handle("lgx:update:check", async (e) => {
-    if (!isTrusted(e)) return { current: "", latest: null, error: true };
+    if (!isTrusted(e)) return { current: "", latest: null, error: true, reason: "unknown" };
     const current = app.getVersion();
     try {
       return { current, latest: await fetchLatest(net.fetch.bind(net), updateUrl), error: false };
-    } catch {
-      return { current, latest: null, error: true };
+    } catch (e) {
+      return { current, latest: null, error: true, reason: e?.reason || "unknown" };
     }
   });
   ipcMain.handle("lgx:update:open", async (e, url) => {

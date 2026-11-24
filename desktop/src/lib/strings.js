@@ -510,7 +510,10 @@ export const EXTRA = {
     "d.set.checking": "Denetleniyor…",
     "d.set.upToDate": "Güncelsiniz.",
     "d.set.newVersion": "Yeni sürüm: {v}",
-    "d.set.checkFail": "Denetlenemedi. İnternet bağlantınızı kontrol edin.",
+    "d.set.checkFail.network": "İnternet bağlantınızı kontrol edin.",
+    "d.set.checkFail.rate_limit": "GitHub şu an çok fazla istek aldı, biraz sonra tekrar deneyin.",
+    "d.set.checkFail.not_found": "Sürüm bilgisine ulaşılamadı.",
+    "d.set.checkFail.unknown": "Denetlenemedi. Biraz sonra tekrar deneyin.",
 
     /* Motor sözlüğündeki "tarayıcı" ifadelerinin masaüstü karşılıkları */
     "lh.desc": "Bir kez yükleyin, bu bilgisayarda saklansın. Farklı firmalar için ayrı antetler kaydedebilirsiniz.",
@@ -1025,7 +1028,10 @@ export const EXTRA = {
     "d.set.checking": "Checking…",
     "d.set.upToDate": "You are up to date.",
     "d.set.newVersion": "New version: {v}",
-    "d.set.checkFail": "Could not check. Check your internet connection.",
+    "d.set.checkFail.network": "Check your internet connection.",
+    "d.set.checkFail.rate_limit": "GitHub has received too many requests right now, try again in a little while.",
+    "d.set.checkFail.not_found": "Version information could not be reached.",
+    "d.set.checkFail.unknown": "Could not check. Try again in a little while.",
 
     "lh.desc": "Upload it once and it stays on this computer. You can save separate letterheads for different companies.",
     "lh.storageNote": "Letterheads are stored only on this computer.",

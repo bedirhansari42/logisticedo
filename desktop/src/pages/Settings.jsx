@@ -142,7 +142,7 @@ export function Settings() {
               <button type="button" className="btn btn--primary btn--sm" onClick={() => openRelease(upd.latest.url)}>{t("d.upd.download")}</button>
             </p>
           )}
-          {upd && upd !== "checking" && upd.status === "error" && <p className="warn-text">{t("d.set.checkFail")}</p>}
+          {upd && upd !== "checking" && upd.status === "error" && <p className="warn-text">{t(`d.set.checkFail.${upd.reason}`)}</p>}
         </section>
       )}
       <section className="card-block pad">

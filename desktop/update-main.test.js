@@ -36,6 +36,20 @@ test("fetchLatest rejects 404, 403 (rate limit), bad JSON and a foreign html_url
   await assert.rejects(fetchLatest(okFetch({ ...good, html_url: "https://evil.com/" }), "https://x/"));
 });
 
+const reasonOf = async (p) => { try { await p; return null; } catch (e) { return e.reason; } };
+
+test("fetchLatest tells apart rate limit, not found, network and other failures by err.reason", async () => {
+  assert.equal(await reasonOf(fetchLatest(okFetch(good, { ok: false, status: 403 }), "https://x/")), "rate_limit");
+  assert.equal(await reasonOf(fetchLatest(okFetch(good, { ok: false, status: 429 }), "https://x/")), "rate_limit");
+  assert.equal(await reasonOf(fetchLatest(okFetch(good, { ok: false, status: 404 }), "https://x/")), "not_found");
+  assert.equal(await reasonOf(fetchLatest(okFetch(good, { ok: false, status: 500 }), "https://x/")), "unknown");
+  assert.equal(await reasonOf(fetchLatest(okFetch(good, { json: async () => { throw new Error("html"); } }), "https://x/")), "unknown");
+  assert.equal(await reasonOf(fetchLatest(okFetch({ ...good, html_url: "https://evil.com/" }), "https://x/")), "unknown");
+  assert.equal(await reasonOf(fetchLatest(async () => { throw new TypeError("fetch failed"); }, "https://x/")), "network");
+  const hang = (_u, { signal }) => new Promise((_res, rej) => signal.addEventListener("abort", () => rej(new Error("aborted"))));
+  assert.equal(await reasonOf(fetchLatest(hang, "https://x/", 20)), "network");
+});
+
 test("fetchLatest gives up after the timeout when the server never answers", async () => {
   const hang = (_u, { signal }) => new Promise((_res, rej) => signal.addEventListener("abort", () => rej(new Error("aborted"))));
   await assert.rejects(fetchLatest(hang, "https://x/", 20));
@@ -59,7 +73,9 @@ test("check returns the latest release and the installed version", async () => {
 
 test("check never throws: a failing fetch becomes error:true", async () => {
   const { handlers } = setup({ fetchImpl: async () => { throw new Error("offline"); } });
-  assert.deepEqual(await handlers["lgx:update:check"]({}), { current: "1.0.0", latest: null, error: true });
+  assert.deepEqual(await handlers["lgx:update:check"]({}), { current: "1.0.0", latest: null, error: true, reason: "network" });
+  const h2 = setup({ fetchImpl: okFetch(good, { ok: false, status: 403 }) }).handlers;
+  assert.deepEqual(await h2["lgx:update:check"]({}), { current: "1.0.0", latest: null, error: true, reason: "rate_limit" });
 });
 
 test("open launches only release pages of this repo", async () => {
@@ -73,7 +89,7 @@ test("open launches only release pages of this repo", async () => {
 
 test("an untrusted sender gets nothing and triggers no request", async () => {
   const { handlers, calls } = setup({ trusted: false, fetchImpl: okFetch(good) });
-  assert.deepEqual(await handlers["lgx:update:check"]({}), { current: "", latest: null, error: true });
+  assert.deepEqual(await handlers["lgx:update:check"]({}), { current: "", latest: null, error: true, reason: "unknown" });
   assert.equal(await handlers["lgx:update:version"]({}), "");
   assert.equal(await handlers["lgx:update:open"]({}, REL), false);
   assert.equal(calls.fetch, 0);

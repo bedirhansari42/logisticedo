@@ -62,6 +62,24 @@ test("a bridge error flag or a thrown error becomes status error and never throw
   assert.equal((await checkForUpdate()).status, "error");
 });
 
+test("the failure reason is passed on (allowlisted); anything unexpected becomes unknown", async () => {
+  for (const reason of ["rate_limit", "not_found", "network"]) {
+    reset();
+    bridge({ current: "1.0.0", latest: null, error: true, reason });
+    assert.equal((await checkForUpdate()).reason, reason, reason);
+  }
+  for (const reason of ["<script>", 42, undefined, null]) {
+    reset();
+    bridge({ current: "1.0.0", latest: null, error: true, reason });
+    const r = await checkForUpdate();
+    assert.equal(r.status, "error");
+    assert.equal(r.reason, "unknown", String(reason));
+  }
+  reset();
+  bridge(new Error("ipc closed"));
+  assert.equal((await checkForUpdate()).reason, "unknown");
+});
+
 test("openRelease forwards the URL and reports the bridge's answer", async () => {
   reset();
   const calls = bridge(res("v1.1.0"));

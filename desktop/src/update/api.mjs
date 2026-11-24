@@ -9,7 +9,9 @@ export function updateApi() {
   return (typeof window !== "undefined" && window.lgxUpdate) || null;
 }
 
-/** status: unavailable (köprü yok) | off (otomatik denetim kapalı) | error | current | newer. Asla fırlatmaz. */
+const REASONS = ["rate_limit", "not_found", "network"];
+
+/** status: unavailable (köprü yok) | off (otomatik denetim kapalı) | error (reason: rate_limit | not_found | network | unknown) | current | newer. Asla fırlatmaz. */
 export async function checkForUpdate({ manual = false } = {}) {
   const api = updateApi();
   if (!api) return { status: "unavailable", current: "" };
@@ -17,11 +19,11 @@ export async function checkForUpdate({ manual = false } = {}) {
   try {
     const r = await api.check();
     const current = typeof r?.current === "string" ? r.current : "";
-    if (!r || r.error || !r.latest) return { status: "error", current };
+    if (!r || r.error || !r.latest) return { status: "error", current, reason: REASONS.includes(r?.reason) ? r.reason : "unknown" };
     if (!isNewer(r.latest.tag, current)) return { status: "current", current };
     return { status: "newer", current, latest: { version: normalizeVersion(r.latest.tag), url: r.latest.url } };
   } catch {
-    return { status: "error", current: "" };
+    return { status: "error", current: "", reason: "unknown" };
   }
 }
 
