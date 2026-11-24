@@ -1,10 +1,7 @@
-import { useSyncExternalStore } from "react";
 import { useT, useLang, setLang } from "../lib/i18n.js";
 import { useApp } from "../lib/app-context.jsx";
 import { useTheme, toggleTheme } from "../lib/theme.js";
 import { Brand, Icon } from "./Icons.jsx";
-import { getAuth, subscribe } from "../auth/store.js";
-import { confirmSignOut } from "../auth/confirm-signout.js";
 
 const NAV = [
   ["dashboard", "/", "dashboard", "d.nav.dashboard"],
@@ -26,7 +23,6 @@ export function Sidebar({ route }) {
   const lang = useLang();
   const { shipments, proformas } = useApp();
   const theme = useTheme();
-  const { user } = useSyncExternalStore(subscribe, getAuth);
   const themeLabel = theme === "dark" ? t("d.nav.themeLight") : t("d.nav.themeDark");
   const active = route.name === "editor" ? "shipments" : route.name === "proformaEditor" ? "proformas" : route.name;
   return (
@@ -58,12 +54,6 @@ export function Sidebar({ route }) {
           <button type="button" data-lang="tr" aria-pressed={lang === "tr"} onClick={() => setLang("tr")}>TR</button>
           <button type="button" data-lang="en" aria-pressed={lang === "en"} onClick={() => setLang("en")}>EN</button>
         </div>
-        {user && user.uid !== "dev" && (
-          <div className="side-user side-label">
-            <span className="side-email" title={user.email}>{user.email}</span>
-            <button type="button" className="btn btn--quiet btn--sm" onClick={confirmSignOut}>{t("d.auth.signOut")}</button>
-          </div>
-        )}
         <p className="side-local side-label"><Icon name="shield" />{t("d.nav.local")}</p>
       </div>
     </aside>

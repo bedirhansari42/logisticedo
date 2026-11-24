@@ -8,7 +8,6 @@ import { runManualBackup } from "../backup/manual.js";
 import { getAuto, saveAuto, subscribe, HOURS } from "../backup/auto.mjs";
 import { runAutoBackup } from "../backup/scheduler.js";
 import { useApp } from "../lib/app-context.jsx";
-import { AccountCard } from "../auth/AccountCard.jsx";
 
 export function Settings() {
   const t = useT();
@@ -107,7 +106,6 @@ export function Settings() {
           <input ref={fileRef} className="visually-hidden" type="file" accept=".json,application/json" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) doImport(f); }} />
         </div>
       </section>
-      <AccountCard />
       <section className="card-block pad">
         <h2 className="block-title">{t("d.set.about")}</h2>
         <dl className="kv">

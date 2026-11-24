@@ -9,19 +9,13 @@ test("app scheme and local schemes are allowed", () => {
     assert.equal(isAllowed(u, o), true, u);
 });
 
-test("only the two Firebase Auth hosts over https are allowed", () => {
-  for (const h of ["identitytoolkit.googleapis.com", "securetoken.googleapis.com"])
-    assert.equal(isAllowed(`https://${h}/v1/x`, o), true, h);
-});
-
-test("lookalike hosts, http, and other Google hosts are blocked", () => {
+test("every external host is blocked, including former Firebase Auth hosts", () => {
   for (const u of [
     "https://evil.com/",
-    "https://identitytoolkit.googleapis.com.evil.com/",
-    "https://evil.com/?https://securetoken.googleapis.com/",
+    "https://identitytoolkit.googleapis.com/v1/x",
+    "https://securetoken.googleapis.com/v1/x",
     "https://firestore.googleapis.com/v1/x",
-    "http://identitytoolkit.googleapis.com/",
-    "https://apis.google.com/js/api.js",
+    "http://example.com/",
     "https://accounts.google.com/"
   ]) assert.equal(isAllowed(u, o), false, u);
 });

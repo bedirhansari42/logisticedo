@@ -21,7 +21,7 @@ desktop/public/assets/
 desktop/public/favicon.svg
 
 # --- Gizli anahtarlar ve sertifikalar (ileride lazım olabilir) ---
-# Firebase service account (auth-config.json'daki web yapılandırması sır DEĞİL, takip edilir)
+# Servis hesabı anahtarları
 *-adminsdk-*.json
 serviceAccount*.json
 # İmzalama sertifikaları / özel anahtarlar

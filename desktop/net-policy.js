@@ -1,6 +1,5 @@
 "use strict";
-/* lockNetwork'ün izin kararı. Uygulama dışına yalnızca giriş için gereken iki Firebase Auth alan adı açıktır. */
-const FIREBASE_HOSTS = new Set(["identitytoolkit.googleapis.com", "securetoken.googleapis.com"]);
+/* lockNetwork'ün izin kararı. Yalnızca uygulamanın kendi protokolü, yerel şemalar ve geliştirme sunucusu açıktır; dış ağ yok. */
 
 const parse = (u) => { try { return new URL(u); } catch { return null; } };
 // Önek eşlemesi değil, ayrıştırılmış adres karşılaştırılır: "localhost:5173.evil.com" gibi benzer adresler eşleşmez.
@@ -11,10 +10,7 @@ function isAllowed(url, { scheme, devUrl }) {
   if (devUrl && sameHost(url, devUrl)) return true;
   if (devUrl) { const w = parse(url); if (w && w.protocol === "ws:" && w.hostname === "localhost") return true; }
   if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("devtools:") || url.startsWith("file:")) return true;
-  try {
-    const u = new URL(url);
-    return u.protocol === "https:" && FIREBASE_HOSTS.has(u.hostname);
-  } catch { return false; }
+  return false;
 }
 
 /** IPC ve gezinme için güvenilen sayfa: yalnızca app://<host> (host sabit) ya da geliştirme sunucusunun tam adresi. */

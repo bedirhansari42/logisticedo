@@ -50,8 +50,8 @@ async function serveFile(request) {
   }
 }
 
-// "Dosyalar cihazdan çıkmaz" vaadini uygulama düzeyinde zorla: uygulama dışına yalnızca giriş için gereken
-// Firebase alan adlarından başka ağ isteği gitmez (karar net-policy.js'de, testli).
+// "Dosyalar cihazdan çıkmaz" vaadini uygulama düzeyinde zorla: uygulama dışına hiçbir ağ isteği gitmez
+// (karar net-policy.js'de, testli).
 function lockNetwork(ses) {
   ses.webRequest.onBeforeRequest((details, cb) => {
     cb({ cancel: !isAllowed(details.url, { scheme: SCHEME, devUrl: DEV_URL }) });
@@ -126,10 +126,6 @@ app.whenReady().then(() => {
   require("./backup-main.js").register({
     dialog, ipcMain, getWindow: () => win, testDir: process.env.LGX_TEST_DIR || null,
     // yalnızca kendi sayfamızdan gelen istekler (uygulama protokolü ya da geliştirme sunucusu)
-    isTrusted: (e) => isTrustedSender(e, { scheme: SCHEME, host: HOST, devUrl: DEV_URL })
-  });
-  require("./auth-main.js").register({
-    ipcMain, isPackaged: app.isPackaged,
     isTrusted: (e) => isTrustedSender(e, { scheme: SCHEME, host: HOST, devUrl: DEV_URL })
   });
   protocol.handle(SCHEME, serveFile);

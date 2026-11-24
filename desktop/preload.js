@@ -1,5 +1,5 @@
 "use strict";
-/* Renderer'a yalnızca yedekleme (üç işlev) ve giriş durumu (tek işlev) için dar köprüler verir; Node/Electron'a başka erişim yok. */
+/* Renderer'a yalnızca yedekleme (üç işlev) için dar bir köprü verir; Node/Electron'a başka erişim yok. */
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("lgxBackup", {
@@ -8,7 +8,3 @@ contextBridge.exposeInMainWorld("lgxBackup", {
   writeAuto: (dir, json) => ipcRenderer.invoke("lgx:backup:write-auto", { dir, json })
 });
 
-// Giriş: yalnızca geliştirici kapısının açık olup olmadığını sorar ({ bypass: boolean })
-contextBridge.exposeInMainWorld("lgxAuth", {
-  info: () => ipcRenderer.invoke("lgx:auth:info")
-});
