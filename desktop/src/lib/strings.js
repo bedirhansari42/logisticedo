@@ -463,7 +463,7 @@ export const EXTRA = {
     "d.set.about": "Hakkında",
     "d.set.version": "Sürüm",
     "d.set.license": "Lisans",
-    "d.set.licenseValue": "Lisanssız sürüm",
+    "d.set.licenseValue": "MIT",
 
     /* Motor sözlüğündeki "tarayıcı" ifadelerinin masaüstü karşılıkları */
     "lh.desc": "Bir kez yükleyin, bu bilgisayarda saklansın. Farklı firmalar için ayrı antetler kaydedebilirsiniz.",
@@ -931,7 +931,7 @@ export const EXTRA = {
     "d.set.about": "About",
     "d.set.version": "Version",
     "d.set.license": "License",
-    "d.set.licenseValue": "Unlicensed version",
+    "d.set.licenseValue": "MIT",
 
     "lh.desc": "Upload it once and it stays on this computer. You can save separate letterheads for different companies.",
     "lh.storageNote": "Letterheads are stored only on this computer.",

@@ -5,6 +5,7 @@
   "description": "Lojistikçiler için masaüstü belge araçları (commercial invoice, packing list, B/L, CMR ve diğerleri)",
   "author": "logisticedo",
   "private": true,
+  "license": "MIT",
   "main": "main.js",
   "scripts": {
     "assets": "node scripts/assets.mjs",

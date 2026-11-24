@@ -37,7 +37,7 @@ Electron penceresini Vite sunucusuna bağlamak için: `npx vite` açıkken `ELEC
 git tag v1.0.0-rc.1 && git push origin v1.0.0-rc.1
 ```
 
-Depo kökü `logisticedo.com/` klasörü olmalıdır (masaüstü derlemesi `../vendor` ve `../assets` klasörlerine ihtiyaç duyar).
+Masaüstü derlemesi depo kökündeki `vendor/` ve `assets/` klasörlerine ihtiyaç duyar; `desktop/` tek başına taşınamaz.
 
 ## Yapı
 
@@ -70,13 +70,9 @@ desktop/
 
 `LGX_TEST_DIR=/klasor npm start` indirmeleri sormadan o klasöre kaydeder ve pencere arka planda kalsa da çizimi durdurmaz (otomatik testler için).
 
-## İmzalama (müşteriye vermeden önce)
+## İmzasız paketler
 
-Paketler **imzasız**. Müşteri bilgisayarlarında macOS "geliştiricisi doğrulanamadı", Windows SmartScreen uyarısı verir.
-- **macOS:** Apple Developer hesabı (99 $/yıl) + notarization.
-- **Windows:** kod imzalama sertifikası (OV/EV).
-
-Gerekli gizli değişkenler `release.yml` içinde yorum olarak hazır.
+Paketler imzalı değildir; macOS "geliştiricisi doğrulanamadı", Windows SmartScreen uyarısı verir. İmzalamak için macOS'ta Apple Developer hesabı (notarization), Windows'ta kod imzalama sertifikası gerekir.
 
 ## İthalat maliyeti (landed cost)
 
