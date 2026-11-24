@@ -46,7 +46,7 @@ async function fetchLatest(fetchFn, url, timeoutMs = TIMEOUT_MS) {
 function register({
   ipcMain, isTrusted, app, net, shell, updateUrl,
   // kurulum (testte değiştirilebilir)
-  platform = process.platform, env = process.env, pid = process.pid, execPath = process.execPath, spawn, tmpRoot,
+  packaged = app.isPackaged, platform = process.platform, env = process.env, pid = process.pid, execPath = process.execPath, spawn, tmpRoot,
   downloadPrefix = DOWNLOAD_PREFIX, downloadAsset = downloadApi.downloadAsset, applyUpdate = applyApi.applyUpdate
 }) {
   ipcMain.handle("lgx:update:version", (e) => (isTrusted(e) ? app.getVersion() : ""));
@@ -99,6 +99,8 @@ function register({
 
   ipcMain.handle("lgx:update:apply", async (e) => {
     if (!isTrusted(e) || st.state !== "ready" || !st.file) return { ok: false, reason: "unknown" };
+    // npm start / electron . : çalışan "uygulama" node_modules içindeki Electron'dur; yerine paket konmaz
+    if (!packaged) return toError(e, "not_packaged");
     const r = await applyUpdate({ platform, file: st.file, execPath, pid, env, spawn, tmpDir: dir });
     if (r.ok) { app.quit(); return { ok: true }; }
     return toError(e, r.reason || "unknown");

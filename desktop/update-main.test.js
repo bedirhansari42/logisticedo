@@ -111,7 +111,7 @@ const asset = (name, extra = {}) => ({ name, size: PKG.length, digest: PKG_SHA, 
 const relJson = (assets) => ({ ...good, assets });
 const bodyOf = (buf) => new ReadableStream({ start(c) { c.enqueue(buf); c.close(); } });
 
-function installSetup({ platform = "win32", assets = [asset(winName), asset(macName)], trusted = true, env = {}, applyResult = { ok: true }, pkg = PKG } = {}) {
+function installSetup({ packaged = true, platform = "win32", assets = [asset(winName), asset(macName)], trusted = true, env = {}, applyResult = { ok: true }, pkg = PKG } = {}) {
   const handlers = {};
   const events = []; const log = { fetch: [], apply: [], quit: 0 };
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lgx-um-"));
@@ -122,7 +122,7 @@ function installSetup({ platform = "win32", assets = [asset(winName), asset(macN
   } };
   register({
     ipcMain: { handle: (ch, fn) => { handlers[ch] = fn; } }, isTrusted: () => trusted, app: { getVersion: () => "1.0.0", quit: () => { log.quit++; } },
-    net, shell: { openExternal: async () => {} }, updateUrl: "https://x/", platform, env, pid: 7, execPath: "/x/logisticedo.exe", spawn: () => ({ unref() {} }), tmpRoot,
+    net, shell: { openExternal: async () => {} }, updateUrl: "https://x/", packaged, platform, env, pid: 7, execPath: "/x/logisticedo.exe", spawn: () => ({ unref() {} }), tmpRoot,
     applyUpdate: async (a) => { log.apply.push(a); return applyResult; }
   });
   const sender = { send: (ch, p) => { if (ch === "lgx:update:progress") events.push(p); } };
@@ -206,4 +206,13 @@ test("install ignores any argument: the renderer cannot choose the package", asy
   await t.handlers["lgx:update:install"]({ sender: t.sender }, "https://evil.com/x.exe");
   await t.settled();
   assert.ok(t.log.fetch.every((u) => u === "https://x/" || u.startsWith(DOWNLOAD_PREFIX)));
+});
+
+test("an unpackaged (npm start) build never applies: nothing is swapped, the app keeps running, the reason is not_packaged", async () => {
+  const t = installSetup({ packaged: false });
+  await t.handlers["lgx:update:install"]({ sender: t.sender }); await t.settled();
+  assert.deepEqual(await t.handlers["lgx:update:apply"]({ sender: t.sender }), { ok: false, reason: "not_packaged" });
+  assert.equal(t.log.apply.length, 0);
+  assert.equal(t.log.quit, 0);
+  assert.deepEqual([t.events.at(-1).state, t.events.at(-1).reason], ["error", "not_packaged"]);
 });

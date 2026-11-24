@@ -2,7 +2,7 @@
    { state: "downloading"|"ready"|"error"|"idle", percent?, reason? }. */
 export const initialInstall = { phase: "offer", percent: 0, reason: "" };
 
-const REASONS = ["no_asset", "digest", "size", "network", "disk", "portable", "not_writable", "aborted", "unknown"];
+const REASONS = ["no_asset", "digest", "size", "network", "disk", "portable", "not_writable", "not_packaged", "aborted", "unknown"];
 const clamp = (n) => Math.max(0, Math.min(100, Math.round(n)));
 
 export function nextInstall(state, ev) {

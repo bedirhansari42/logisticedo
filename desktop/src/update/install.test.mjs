@@ -33,3 +33,7 @@ test("canInstall needs the bridge and a non-portable build", () => {
   assert.equal(canInstall({ hasBridge: false }), false);
   assert.equal(canInstall({ hasBridge: true, portable: true }), false);
 });
+
+test("not_packaged is a known reason", () => {
+  assert.equal(nextInstall(initialInstall, { type: "progress", state: "error", reason: "not_packaged" }).reason, "not_packaged");
+});
