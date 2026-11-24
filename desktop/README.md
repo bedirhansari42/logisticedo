@@ -66,6 +66,10 @@ desktop/
 - Veriler kullanıcının bilgisayarında tutulur (macOS: `~/Library/Application Support/logisticedo`, Windows: `%APPDATA%\logisticedo`).
 - PDF/Excel indirmelerinde işletim sisteminin "Farklı kaydet" penceresi açılır.
 
+## İlk açılış tanıtımı
+
+Yeni kurulumda (hiç veri yokken) kısa bir karşılama penceresi açılır; "Başla" denince sağ altta sayfayı kilitlemeyen bir rehber kartı çıkar: önce antet, şirket ve banka bilgisi eklenir (adımlar veri eklenince kendiliğinden işaretlenir), sonra Proforma, Sevkiyatlar, Konteyner planı, İthalat maliyeti ve Notlar sayfaları tanıtılır. Zaten verisi olan kullanıcıda otomatik açılmaz. Ayarlar → Tanıtım'dan yeniden gösterilir. Durum bu bilgisayarın `localStorage`'ında (`lgx.tour`) tutulur. Mantık `src/tour/model.mjs` (saf), durum `src/tour/store.mjs`; testler: `npm run test:tour`.
+
 ## Güncelleme bildirimi
 
 Uygulama açıldıktan 3 saniye sonra (sonra 24 saatte bir) GitHub'daki en son **kararlı** release'e bakar (ön sürümler `-rc/-beta/-alpha` sayılmaz). Yüklü sürümden yeniyse "İndir / Sonra / Bu sürümü atla" penceresi çıkar; "İndir" release sayfasını tarayıcıda açar, kendiliğinden kurulum yoktur. Ayarlar → Güncellemeler'den kapatılabilir ve elle denetlenebilir. İstek ana süreçten yapılır (`update-main.js`), karar mantığı `src/update/*.mjs` içindedir. Testler: `npm run test:update` ve `npm run test:net`. Geliştirmede `LGX_UPDATE_URL=http://localhost:8799/latest.json npm run electron` sahte bir release sunucusuna bakar; paketli uygulamada bu değişken etkisizdir.

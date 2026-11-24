@@ -10,6 +10,8 @@ import { runAutoBackup } from "../backup/scheduler.js";
 import { useApp } from "../lib/app-context.jsx";
 import { updateApi, checkForUpdate, openRelease, useAppVersion } from "../update/api.mjs";
 import { isEnabled, setEnabled } from "../update/state.mjs";
+import { tourEvent } from "../tour/store.mjs";
+import { go } from "../lib/router.js";
 
 export function Settings() {
   const t = useT();
@@ -112,6 +114,13 @@ export function Settings() {
           <button type="button" className="btn btn--ghost btn--sm" onClick={doExport} disabled={!!busy}>{busy === "export" ? <><Spinner />{t("d.bk.busy")}</> : <><Icon name="download" />{t("d.bk.export")}</>}</button>
           <button type="button" className="btn btn--ghost btn--sm" onClick={() => fileRef.current?.click()} disabled={!!busy}>{busy === "import" ? <><Spinner />{t("d.bk.busy")}</> : <><Icon name="upload" />{t("d.bk.import")}</>}</button>
           <input ref={fileRef} className="visually-hidden" type="file" accept=".json,application/json" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) doImport(f); }} />
+        </div>
+      </section>
+      <section className="card-block pad">
+        <h2 className="block-title">{t("d.set.tour")}</h2>
+        <p className="muted">{t("d.set.tourText")}</p>
+        <div className="lc-downloads">
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => { go("/"); tourEvent("restart"); }}>{t("d.set.tourRestart")}</button>
         </div>
       </section>
       {updApi && (

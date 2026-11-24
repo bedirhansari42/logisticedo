@@ -24,7 +24,8 @@
     "test:backup": "node --test src/backup/*.test.mjs",
     "test:notes": "node --test src/notes/*.test.mjs",
     "test:net": "node --test *.test.js",
-    "test:update": "node --test src/update/*.test.mjs"
+    "test:update": "node --test src/update/*.test.mjs",
+    "test:tour": "node --test src/tour/*.test.mjs"
   },
   "build": {
     "appId": "com.logisticedo.desktop",

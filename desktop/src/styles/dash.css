@@ -437,3 +437,20 @@ body { overflow: hidden; }
 .nt-addcol { display: flex; gap: 8px; align-items: center; }
 .nt-addcol .input { flex: 1; min-width: 0; min-height: 38px; padding: 8px 10px; }
 
+/* İlk açılış rehber kartı: sağ altta, sayfayı kilitlemez (gölge yok, katmanlı yüzey) */
+.tour-card { position: fixed; right: 20px; bottom: 20px; z-index: 40; width: min(340px, calc(100vw - 24px)); display: grid; gap: 12px; padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
+.tour-card:focus { outline: none; }
+.tour-open .page { padding-bottom: 340px; }
+.tour-card h2 { margin: 0; font-size: 1rem; font-weight: 500; letter-spacing: -0.01em; }
+.tour-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tour-count { font-size: 0.75rem; color: var(--text-4); font-variant-numeric: tabular-nums; }
+.tour-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.tour-list li { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.tour-mark { color: var(--text-4); text-align: center; }
+.tour-list li.is-done .tour-mark { color: var(--green-ink); }
+.tour-step { display: grid; gap: 2px; min-width: 0; }
+.tour-step b { font-weight: 500; font-size: 0.875rem; color: var(--text); }
+.tour-step small { font-size: 0.75rem; line-height: 1.4; color: var(--text-4); }
+.tour-list li.is-done .tour-step b { color: var(--text-3); }
+.tour-msg { margin: 0; font-size: 0.875rem; line-height: 1.5; color: var(--text-3); }
+.tour-foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
