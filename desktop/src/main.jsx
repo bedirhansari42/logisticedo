@@ -5,5 +5,6 @@ import "@css/base.css";
 import "@css/app.css";
 import "./styles/dash.css";
 import App from "./App.jsx";
+import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
 
-createRoot(document.getElementById("root")).render(<StrictMode><App /></StrictMode>);
+createRoot(document.getElementById("root")).render(<StrictMode><ErrorBoundary root><App /></ErrorBoundary></StrictMode>);

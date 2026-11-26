@@ -8,6 +8,7 @@ import { BackupReminder } from "./components/BackupReminder.jsx";
 import { UpdateNotice } from "./components/UpdateNotice.jsx";
 import { Tour } from "./components/Tour.jsx";
 import { Sidebar } from "./components/Sidebar.jsx";
+import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
 import { Dashboard } from "./pages/Dashboard.jsx";
 import { Shipments } from "./pages/Shipments.jsx";
 import { Proformas } from "./pages/Proformas.jsx";
@@ -59,7 +60,7 @@ export default function App() {
     <AppProvider>
       <div className={`shell${route.name === "editor" || route.name === "proformaEditor" ? " shell--compact" : ""}`}>
         <Sidebar route={route} />
-        <main className="main"><Pages route={route} /></main>
+        <main className="main"><ErrorBoundary resetKey={`${route.name}/${route.id || ""}`}><Pages route={route} /></ErrorBoundary></main>
       </div>
       <ConfirmHost />
       <BackupReminder />

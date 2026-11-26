@@ -13,8 +13,12 @@ const parse = (u) => { try { return new URL(u); } catch { return null; } };
 const sameHost = (url, other) => { const a = parse(url), b = parse(other); return !!a && !!b && a.protocol === b.protocol && a.host === b.host; };
 
 /** method ve fromRenderer (isteği bir sayfa mı yaptı, yoksa ana süreç mi) verilmezse güncelleme adresi reddedilir. */
-function isAllowed(url, { scheme, devUrl, updateUrl = UPDATE_API_URL, downloadPrefix = DOWNLOAD_PREFIX, method, fromRenderer }) {
-  if (url.startsWith(scheme + "://")) return true;
+function isAllowed(url, { scheme, host, devUrl, updateUrl = UPDATE_API_URL, downloadPrefix = DOWNLOAD_PREFIX, method, fromRenderer }) {
+  if (url.startsWith(scheme + "://")) {
+    if (!host) return true;
+    const u = parse(url);
+    return !!u && u.host === host; // host sabit: app://başka-bir-ad açılmaz
+  }
   if (devUrl && sameHost(url, devUrl)) return true;
   if (devUrl) { const w = parse(url); if (w && w.protocol === "ws:" && w.hostname === "localhost") return true; }
   if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("devtools:") || url.startsWith("file:")) return true;
@@ -50,4 +54,33 @@ function isTrustedSender(event, opts) {
   return isTrustedUrl(f.url || "", opts);
 }
 
-module.exports = { isAllowed, isTrustedUrl, isTrustedSender, isReleaseUrl, REPO, UPDATE_API_URL, DOWNLOAD_PREFIX, ASSET_HOSTS };
+/* İçerik güvenlik politikası (app:// yanıtlarına eklenir). Satır içi ve eval betik yok; dışarıya hiçbir şey yok.
+   style 'unsafe-inline': docx-preview ve html-to-image <style>/style="" üretir (antet önizlemesi).
+   'wasm-unsafe-eval': pdf.js'in isteğe bağlı WebAssembly kod çözücüleri için (eval değil).
+   blob:/data:: üretilen PDF/görsel önizlemeleri, fontlar ve worker. */
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'wasm-unsafe-eval'",
+  "worker-src 'self' blob:",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data: blob:",
+  "connect-src 'self' data: blob:",
+  "media-src 'none'",
+  "object-src 'none'",
+  "frame-src 'none'",
+  "base-uri 'none'",
+  "form-action 'none'"
+].join("; ");
+
+/** Sayfanın isteyebileceği izinler: yalnızca kalıcı depolama (IndexedDB silinmesin). Kamera, mikrofon, konum, bildirim, pano okuma vb. kapalı. */
+const ALLOWED_PERMISSIONS = new Set(["persistent-storage"]);
+const isPermissionAllowed = (permission) => ALLOWED_PERMISSIONS.has(permission);
+
+/** Yalnızca geliştirme (paketlenmemiş) derlemede geçerli ortam değişkenleri. Paketli sürümde yok sayılır. */
+function devEnv(env, isPackaged) {
+  if (isPackaged) return { devUrl: null, testDir: null };
+  return { devUrl: env.ELECTRON_START_URL || null, testDir: env.LGX_TEST_DIR || null };
+}
+
+module.exports = { CSP, isPermissionAllowed, devEnv, isAllowed, isTrustedUrl, isTrustedSender, isReleaseUrl, REPO, UPDATE_API_URL, DOWNLOAD_PREFIX, ASSET_HOSTS };

@@ -62,8 +62,8 @@ export function Settings() {
       const plan = await planRestore(backup, await collectSnapshot());
       await applyPlan(plan);
       const sum = ["shipments", "proformas", "letterheads", "companies", "notes"].reduce((a, k) => ({ added: a.added + plan.counts[k].added, updated: a.updated + plan.counts[k].updated }), { added: 0, updated: 0 });
-      toast(t("d.bk.done", sum), "ok");
-      setTimeout(() => window.location.reload(), 900); // listeler, dil ve tema yeniden yüklensin
+      toast(t("d.bk.done", sum) + (plan.skipped ? " " + t("d.bk.skipped", { n: plan.skipped }) : ""), plan.skipped ? "error" : "ok", plan.skipped ? 8000 : undefined);
+      setTimeout(() => window.location.reload(), plan.skipped ? 4500 : 900); // listeler, dil ve tema yeniden yüklensin (atlanan varsa uyarı okunabilsin)
     } catch (e) {
       console.error(e);
       toast(e?.message === "storage" ? t("d.bk.err.storage") : t("d.bk.err.fail", { msg: e?.message || String(e) }), "error", 8000);
@@ -107,7 +107,7 @@ export function Settings() {
               <button type="button" className="btn btn--quiet btn--sm" onClick={pickFolder}>{auto.dir ? t("d.bk.folderChange") : t("d.bk.folderChoose")}</button>
             </div>
             <p className="muted pl-hint">{t("d.bk.autoNote")}</p>
-            {auto.lastError && <p className="warn-text">{t("d.bk.autoErr", { msg: auto.lastError })}</p>}
+            {auto.lastError && <p className="warn-text">{t("d.bk.autoErr", { msg: auto.lastError === "folder-not-chosen" ? t("d.bk.err.folder") : auto.lastError })}</p>}
           </>
         )}
         <div className="lc-downloads">

@@ -29,13 +29,91 @@ async function encode(v) {
   if (isObj(v)) return Object.fromEntries(await Promise.all(Object.entries(v).map(async ([k, x]) => [k, await encode(x)])));
   return v;
 }
-function decode(v) {
-  if (Array.isArray(v)) return v.map(decode);
+/** Yalnızca düz JSON döner: bilinmeyen yerdeki {__blob} kalıpları null olur (Blob yalnızca bilinen alanlarda kurulur). */
+function plain(v) {
+  if (Array.isArray(v)) return v.map(plain);
   if (isObj(v)) {
-    if (isObj(v.__blob) && typeof v.__blob.b64 === "string") return b64ToBlob(v.__blob.b64, v.__blob.type || "");
-    return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, decode(x)]));
+    if ("__blob" in v) return null;
+    return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, plain(x)]));
   }
   return v;
+}
+
+/** {__blob} → Blob; tür izinli değilse ya da base64 bozuksa null. allow: tür → bool */
+function toBlob(enc, allow) {
+  if (!isObj(enc) || !isObj(enc.__blob) || typeof enc.__blob.b64 !== "string") return null;
+  const type = typeof enc.__blob.type === "string" ? enc.__blob.type.toLowerCase() : "";
+  const t = allow(type);
+  if (!t) return null;
+  try { return b64ToBlob(enc.__blob.b64, typeof t === "string" ? t : type); } catch { return null; }
+}
+
+/* ---- Geri yüklemede kayıt doğrulama: el yapımı ya da bozuk bir yedek arayüzü çökertmesin ---- */
+const MAX_ID = 200;
+const validId = (v) => typeof v === "string" && v.length > 0 && v.length <= MAX_ID;
+const isPrim = (v) => typeof v === "string" || typeof v === "boolean" || v === null || (typeof v === "number" && Number.isFinite(v));
+const clampTime = (v, now) => (typeof v === "number" && Number.isFinite(v) ? Math.min(Math.max(v, 0), now) : 0);
+const LH_TYPES = ["application/pdf", "image/png", "image/jpeg"];
+const MIME = /^[a-z0-9][a-z0-9.+-]*\/[a-z0-9][a-z0-9.+-]*$/;
+/** Listelerde metin olarak çizilen kayıt alanları: varsa metin (ya da null) olmalı */
+const TEXT_FIELDS = ["name", "status", "source", "lang", "thumb", "kind", "lhId", "companyId", "bankId", "proformaId"];
+const COMPANY_TEXT = ["name", "address", "taxId", "contact", "signName", "signTitle", "signPlace", "lhId"];
+const BANK_TEXT = ["currency", "bankName", "branch", "accountName", "iban", "swift", "accountNo"];
+
+function cleanSummary(s) {
+  if (!isObj(s)) return {};
+  const out = {};
+  for (const [k, v] of Object.entries(s)) {
+    if (isPrim(v)) out[k] = v;
+    else if (Array.isArray(v) && v.every((x) => typeof x === "string")) out[k] = v;
+  }
+  return out;
+}
+
+/** Ortak kurallar; enc: aynı kaydın kodlanmış (Blob'ları {__blob}) hâli. Geçersizse null. */
+function cleanRecord(enc, kind, now) {
+  if (!isObj(enc) || !validId(enc.id)) return null;
+  const r = plain(enc);
+  for (const f of TEXT_FIELDS) if (f in r && r[f] !== null && typeof r[f] !== "string") delete r[f];
+  if ("createdAt" in r) r.createdAt = clampTime(r.createdAt, now);
+  if ("updatedAt" in r) r.updatedAt = clampTime(r.updatedAt, now);
+  if ("bankAuto" in r && typeof r.bankAuto !== "boolean") r.bankAuto = true;
+  if (kind === "letterheads") {
+    r.data = toBlob(enc.data, (t) => LH_TYPES.includes(t));
+    if (!r.data) return null;
+    if ("preview" in enc) r.preview = toBlob(enc.preview, (t) => t === "image/jpeg" || t === "image/png");
+    return r;
+  }
+  // sevkiyat / proforma
+  if (!isObj(r.state)) return null;
+  if ("summary" in r) r.summary = cleanSummary(r.summary);
+  if ("auto" in r) r.auto = Array.isArray(r.auto) ? r.auto.filter((x) => typeof x === "string") : [];
+  if (kind === "proformas" && "file" in enc) {
+    const f = enc.file;
+    const blob = isObj(f) ? toBlob(f.blob, (t) => (MIME.test(t) ? t : "application/octet-stream")) : null;
+    r.file = blob ? { name: typeof f.name === "string" ? f.name : "", type: blob.type, size: blob.size, blob } : null;
+  }
+  return r;
+}
+
+function cleanList(list, kind, now, skip) {
+  const out = [];
+  for (const enc of list) { const r = cleanRecord(enc, kind, now); if (r) out.push(r); else skip.n++; }
+  return out;
+}
+
+function cleanCompany(c, skip, now) {
+  if (!isObj(c) || !validId(c.id)) { skip.n++; return null; }
+  const r = plain(c);
+  for (const f of COMPANY_TEXT) if (f in r && typeof r[f] !== "string") r[f] = "";
+  if ("updatedAt" in r) r.updatedAt = clampTime(r.updatedAt, now);
+  r.banks = (Array.isArray(r.banks) ? r.banks : []).filter((b) => isObj(b) && validId(b.id)).map((b) => {
+    const x = { ...b };
+    for (const f of BANK_TEXT) if (f in x && typeof x[f] !== "string") x[f] = "";
+    if ("isDefault" in x && typeof x.isDefault !== "boolean") x.isDefault = false;
+    return x;
+  });
+  return r;
 }
 
 /** snapshot: { letterheads: [], shipments: [], proformas: [], kv: {anahtar: değer}, local: {anahtar: metin} } */
@@ -78,10 +156,12 @@ function mergeById(local, incoming) {
   return { put, counts };
 }
 
+const idList = (v, now = Infinity) => (Array.isArray(v) ? v.filter((x) => isObj(x) && validId(x.id)).map((x) => ("updatedAt" in x ? { ...x, updatedAt: clampTime(x.updatedAt, now) } : x)) : []);
+
 /** Not panosu: sütunlar kimliğe göre birleşir (yerel ad kalır, eksik olanlar eklenir); kartlarda daha yeni olan kazanır. Hiçbir şey silinmez. */
-function mergeNotes(local, incoming) {
-  const cols = mergeById(local.columns || [], (incoming.columns || []).filter(isObj));
-  const cards = mergeById(local.cards || [], (incoming.cards || []).filter(isObj));
+function mergeNotes(local, incoming, now) {
+  const cols = mergeById(local.columns || [], idList(incoming.columns, now));
+  const cards = mergeById(local.cards || [], idList(incoming.cards, now));
   if (!cols.put.length && !cards.put.length) return { board: null, counts: cards.counts };
   const put = new Map(cards.put.map((c) => [c.id, c]));
   const have = new Set((local.cards || []).map((c) => c.id));
@@ -94,36 +174,45 @@ function mergeNotes(local, incoming) {
   };
 }
 
-/** current: yerel snapshot (createBackup ile aynı şekil). Dönüş: yazılacak kayıtlar ve sayılar; hiçbir şey yazmaz. */
-export async function planRestore(backup, current) {
-  const d = decode(backup.data);
-  const sh = mergeById(current.shipments || [], d.shipments);
-  const lh = mergeById(current.letterheads || [], d.letterheads);
-  const pf = mergeById(current.proformas || [], d.proformas || []);
+/** current: yerel snapshot (createBackup ile aynı şekil). Dönüş: yazılacak kayıtlar, sayılar ve atlanan (bozuk) kayıt sayısı;
+    hiçbir şey yazmaz. Dosyadaki her kayıt doğrulanır (kimlik, zaman damgası, özet, Blob alanları); geçersizler atlanır. */
+export async function planRestore(backup, current, { now = Date.now() } = {}) {
+  const d = backup.data;
+  const skip = { n: 0 };
+  const sh = mergeById(current.shipments || [], cleanList(d.shipments, "shipments", now, skip));
+  const lh = mergeById(current.letterheads || [], cleanList(d.letterheads, "letterheads", now, skip));
+  const pf = mergeById(current.proformas || [], cleanList(d.proformas || [], "proformas", now, skip));
   const kv = {};
   let companies = { added: 0, updated: 0, kept: 0 };
   let notes = { added: 0, updated: 0, kept: 0 };
   for (const key of KV_KEYS) {
-    const v = d.kv[key];
+    const v = plain(d.kv[key]);
     if (v === undefined) continue;
-    if (key === "companies" && Array.isArray(v)) {
+    if (key === "companies") {
+      if (!Array.isArray(v)) continue;
       const local = current.kv?.companies || [];
-      const m = mergeById(local, v.filter(isObj));
+      const m = mergeById(local, v.map((c) => cleanCompany(c, skip, now)).filter(Boolean));
       companies = m.counts;
       if (m.put.length) {
         const putIds = new Map(m.put.map((r) => [r.id, r]));
         kv.companies = [...local.map((r) => putIds.get(r.id) || r), ...m.put.filter((r) => !local.some((l) => l.id === r.id))];
       }
-    } else if (key === "notes" && isObj(v) && isObj(current.kv?.notes)) {
-      const m = mergeNotes(current.kv.notes, v);
-      notes = m.counts;
-      if (m.board) kv.notes = m.board;
-    } else if (current.kv?.[key] === undefined) {
-      if (key === "notes" && isObj(v)) notes = { added: Array.isArray(v.cards) ? v.cards.length : 0, updated: 0, kept: 0 };
+    } else if (key === "notes") {
+      if (!isObj(v)) continue;
+      if (isObj(current.kv?.notes)) {
+        const m = mergeNotes(current.kv.notes, v, now);
+        notes = m.counts;
+        if (m.board) kv.notes = m.board;
+      } else if (current.kv?.notes === undefined) {
+        const board = { ...v, columns: idList(v.columns, now), cards: idList(v.cards, now) };
+        notes = { added: board.cards.length, updated: 0, kept: 0 };
+        kv.notes = board;
+      }
+    } else if (typeof v === "string" && current.kv?.[key] === undefined) {
       kv[key] = v;
     }
   }
   const local = {};
   for (const key of LOCAL_KEYS) if (typeof d.local[key] === "string") local[key] = d.local[key];
-  return { shipments: sh.put, proformas: pf.put, letterheads: lh.put, kv, local, counts: { shipments: sh.counts, proformas: pf.counts, letterheads: lh.counts, companies, notes } };
+  return { shipments: sh.put, proformas: pf.put, letterheads: lh.put, kv, local, skipped: skip.n, counts: { shipments: sh.counts, proformas: pf.counts, letterheads: lh.counts, companies, notes } };
 }

@@ -5,6 +5,9 @@ import { createBackup, validateBackup, planRestore, BACKUP_VERSION, LOCAL_KEYS }
 const snap = (o = {}) => ({ letterheads: [], shipments: [], kv: {}, local: {}, ...o });
 const roundtrip = async (b) => JSON.parse(JSON.stringify(b));
 const bytes = async (blob) => [...new Uint8Array(await blob.arrayBuffer())];
+const S = (o) => ({ state: {}, ...o }); // sevkiyat / proforma kaydı (state zorunlu)
+const pdf = () => new Blob([new Uint8Array([1])], { type: "application/pdf" });
+const L = (o) => ({ data: pdf(), ...o }); // antet kaydı (data Blob'u zorunlu)
 
 test("blobs survive a JSON round trip with type and bytes", async () => {
   const lh = { id: "a", name: "Antet", updatedAt: 5, data: new Blob([new Uint8Array([0, 1, 2, 250, 255])], { type: "application/pdf" }), preview: new Blob([new Uint8Array([9, 8])], { type: "image/jpeg" }), thumb: "data:image/jpeg;base64,xx" };
@@ -27,7 +30,7 @@ test("large blobs encode (no call stack overflow)", async () => {
 });
 
 test("backup has format, version and a summary", async () => {
-  const b = await createBackup(snap({ shipments: [{ id: "s1" }, { id: "s2" }], letterheads: [{ id: "l" }], kv: { companies: [{ id: "c1" }] } }), { now: 1000, appVersion: "1.2.3" });
+  const b = await createBackup(snap({ shipments: [S({ id: "s1" }), S({ id: "s2" })], letterheads: [L({ id: "l" })], kv: { companies: [{ id: "c1" }] } }), { now: 1000, appVersion: "1.2.3" });
   assert.deepEqual([b.format, b.version, b.createdAt, b.appVersion], ["logisticedo-backup", BACKUP_VERSION, 1000, "1.2.3"]);
   assert.deepEqual(validateBackup(b).summary, { shipments: 2, letterheads: 1, companies: 1, notes: 0, proformas: 0 });
 });
@@ -43,7 +46,7 @@ test("invalid files are rejected with a message key", async () => {
 });
 
 test("restore adds missing records and keeps the newer one", async () => {
-  const backup = await roundtrip(await createBackup(snap({ shipments: [{ id: "new", updatedAt: 1 }, { id: "both-newer-in-file", updatedAt: 20, v: "file" }, { id: "both-older-in-file", updatedAt: 5, v: "file" }] })));
+  const backup = await roundtrip(await createBackup(snap({ shipments: [S({ id: "new", updatedAt: 1 }), S({ id: "both-newer-in-file", updatedAt: 20, v: "file" }), S({ id: "both-older-in-file", updatedAt: 5, v: "file" })] })));
   const current = snap({ shipments: [{ id: "both-newer-in-file", updatedAt: 10, v: "local" }, { id: "both-older-in-file", updatedAt: 9, v: "local" }, { id: "only-local", updatedAt: 1 }] });
   const plan = await planRestore(backup, current);
   assert.deepEqual(plan.shipments.map((s) => [s.id, s.v]).sort(), [["both-newer-in-file", "file"], ["new", undefined]]);
@@ -118,7 +121,7 @@ test("proformas are counted in the summary", async () => {
 });
 
 test("an old backup without a proformas key still validates and restores", async () => {
-  const b = await roundtrip(await createBackup(snap({ shipments: [{ id: "s1" }] })));
+  const b = await roundtrip(await createBackup(snap({ shipments: [S({ id: "s1" })] })));
   delete b.data.proformas;
   const v = validateBackup(b);
   assert.equal(v.ok, true);
@@ -135,7 +138,7 @@ test("a non-array proformas key is rejected", async () => {
 });
 
 test("proformas merge by id: new added, newer updated, local-only kept", async () => {
-  const file = [{ id: "new", updatedAt: 1 }, { id: "newer-in-file", updatedAt: 20, v: "file" }, { id: "older-in-file", updatedAt: 5, v: "file" }];
+  const file = [S({ id: "new", updatedAt: 1 }), S({ id: "newer-in-file", updatedAt: 20, v: "file" }), S({ id: "older-in-file", updatedAt: 5, v: "file" })];
   const local = [{ id: "newer-in-file", updatedAt: 10, v: "local" }, { id: "older-in-file", updatedAt: 9, v: "local" }, { id: "only-local", updatedAt: 1 }];
   const plan = await planRestore(await roundtrip(await createBackup(snap({ proformas: file }))), snap({ proformas: local }));
   assert.deepEqual(plan.proformas.map((r) => [r.id, r.v]).sort(), [["new", undefined], ["newer-in-file", "file"]]);
@@ -143,10 +146,135 @@ test("proformas merge by id: new added, newer updated, local-only kept", async (
 });
 
 test("an imported proforma's original file blob survives the round trip", async () => {
-  const rec = { id: "p", updatedAt: 1, file: { name: "a.pdf", type: "application/pdf", size: 3, blob: new Blob([new Uint8Array([1, 2, 3])], { type: "application/pdf" }) } };
+  const rec = { id: "p", updatedAt: 1, state: {}, file: { name: "a.pdf", type: "application/pdf", size: 3, blob: new Blob([new Uint8Array([1, 2, 3])], { type: "application/pdf" }) } };
   const plan = await planRestore(await roundtrip(await createBackup(snap({ proformas: [rec] }))), snap());
   const got = plan.proformas[0].file;
   assert.equal(got.blob instanceof Blob, true);
   assert.equal(got.blob.size, 3);
   assert.equal(got.name, "a.pdf");
+});
+
+// ---- Bozuk / el yapımı yedekler (güvenlik run-2: restore-unvalidated-record-shape) ----
+const NOW = 1_000_000;
+const plan0 = async (data, current = snap()) => planRestore(await roundtrip(await createBackup(snap(data))), current, { now: NOW });
+
+test("records without a usable id are skipped and counted", async () => {
+  const plan = await plan0({ shipments: [S({ id: "" }), S({ id: 5 }), S({ id: "x".repeat(500) }), "str", null, [1], S({ id: "ok" })] });
+  assert.deepEqual(plan.shipments.map((r) => r.id), ["ok"]);
+  assert.equal(plan.skipped, 6);
+});
+
+test("shipments and proformas without an object state are skipped", async () => {
+  const plan = await plan0({ shipments: [{ id: "a" }, { id: "b", state: "x" }, { id: "c", state: [] }], proformas: [{ id: "p", state: null }] });
+  assert.deepEqual([plan.shipments, plan.proformas], [[], []]);
+  assert.equal(plan.skipped, 4);
+});
+
+test("summary keeps only primitive fields and string arrays (a React child cannot be an object)", async () => {
+  const plan = await plan0({ shipments: [S({ id: "s", summary: { buyer: { evil: 1 }, invoiceNo: "INV-1", total: 12.5, foc: false, missing: ["a", "b"], bad: [{}], obj: {} } })] });
+  assert.deepEqual(plan.shipments[0].summary, { invoiceNo: "INV-1", total: 12.5, foc: false, missing: ["a", "b"] });
+});
+
+test("a summary that is not an object becomes empty", async () => {
+  const plan = await plan0({ proformas: [S({ id: "p", summary: "x" })] });
+  assert.deepEqual(plan.proformas[0].summary, {});
+});
+
+test("listed text fields that are not strings are dropped", async () => {
+  const plan = await plan0({ shipments: [S({ id: "s", status: { a: 1 }, lhId: 3, companyId: "c", proformaId: null })] });
+  const r = plan.shipments[0];
+  assert.equal("status" in r, false);
+  assert.equal("lhId" in r, false);
+  assert.equal(r.companyId, "c");
+  assert.equal(r.proformaId, null);
+});
+
+test("auto must be a list of strings", async () => {
+  const plan = await plan0({ shipments: [S({ id: "a", auto: "x" }), S({ id: "b", auto: ["m", 1, {}] })] });
+  assert.deepEqual(plan.shipments.map((r) => r.auto), [[], ["m"]]);
+});
+
+test("future timestamps are clamped to now so a crafted record cannot win every later merge", async () => {
+  const plan = await plan0({ shipments: [S({ id: "f", updatedAt: NOW * 10, createdAt: NOW * 10 }), S({ id: "g", updatedAt: "x", createdAt: -5 })] });
+  assert.deepEqual(plan.shipments.map((r) => [r.updatedAt, r.createdAt]), [[NOW, NOW], [0, 0]]);
+});
+
+test("a clamped future record still updates an older local copy but not a newer one", async () => {
+  const plan = await plan0({ shipments: [S({ id: "a", updatedAt: NOW * 10 }), S({ id: "b", updatedAt: NOW * 10 })] }, snap({ shipments: [S({ id: "a", updatedAt: NOW - 1 }), S({ id: "b", updatedAt: NOW })] }));
+  assert.deepEqual(plan.shipments.map((r) => r.id), ["a"]);
+});
+
+test("blobs are rebuilt only in known fields; elsewhere they become null", async () => {
+  const blob = new Blob([new Uint8Array([1, 2])], { type: "image/png" });
+  const plan = await plan0({ shipments: [S({ id: "s", parse: { x: blob }, state: { meta: { invoiceNo: blob } } })], letterheads: [L({ id: "l", extra: blob })] });
+  assert.equal(plan.shipments[0].parse.x, null);
+  assert.equal(plan.shipments[0].state.meta.invoiceNo, null);
+  assert.equal(plan.letterheads[0].extra, null);
+  assert.equal(plan.letterheads[0].data instanceof Blob, true);
+});
+
+test("letterheads need a PDF or PNG/JPEG data blob; preview must be an image", async () => {
+  const mk = (type) => new Blob([new Uint8Array([1])], { type });
+  const plan = await plan0({ letterheads: [
+    { id: "none" },
+    { id: "html", data: mk("text/html") },
+    { id: "png", data: mk("image/png"), preview: mk("text/html") },
+    { id: "pdf", data: mk("application/pdf"), preview: mk("image/jpeg") }
+  ] });
+  assert.deepEqual(plan.letterheads.map((l) => [l.id, l.data.type, l.preview?.type ?? null]), [["png", "image/png", null], ["pdf", "application/pdf", "image/jpeg"]]);
+  assert.equal(plan.skipped, 2);
+});
+
+test("broken base64 does not throw: the letterhead is skipped", async () => {
+  const b = await roundtrip(await createBackup(snap({ letterheads: [L({ id: "l" })] })));
+  b.data.letterheads[0].data.__blob.b64 = "%%%not base64%%%";
+  const plan = await planRestore(b, snap(), { now: NOW });
+  assert.deepEqual(plan.letterheads, []);
+  assert.equal(plan.skipped, 1);
+});
+
+test("a proforma's original file is kept only with a real blob; odd MIME types are neutralised", async () => {
+  const mk = (type) => new Blob([new Uint8Array([1, 2, 3])], { type });
+  const plan = await plan0({ proformas: [
+    S({ id: "a", file: { name: "a.pdf", type: "application/pdf", size: 3, blob: mk("application/pdf") } }),
+    S({ id: "b", file: { name: { x: 1 }, type: "x", size: "big", blob: mk("text/html; charset=<x>") } }),
+    S({ id: "c", file: { name: "c.pdf", blob: "nope" } }),
+    S({ id: "d", file: "x" })
+  ] });
+  const f = Object.fromEntries(plan.proformas.map((p) => [p.id, p.file]));
+  assert.equal(f.a.blob.type, "application/pdf");
+  assert.deepEqual([f.b.name, f.b.type, f.b.size, f.b.blob.type, f.b.blob.size], ["", "application/octet-stream", 3, "application/octet-stream", 3]);
+  assert.equal(f.c, null);
+  assert.equal(f.d, null);
+});
+
+test("companies need an id; name and bank fields are coerced to text", async () => {
+  const plan = await plan0({ kv: { companies: [{ name: "no id" }, { id: "c1", name: { x: 1 }, banks: "x" }, { id: "c2", name: "Ok", banks: [{ id: "b1", iban: 5, currency: "EUR" }, "x", { iban: "no id" }] }] } });
+  assert.deepEqual(plan.kv.companies.map((c) => [c.id, c.name, c.banks]), [["c1", "", []], ["c2", "Ok", [{ id: "b1", iban: "", currency: "EUR" }]]]);
+  assert.equal(plan.skipped, 1);
+});
+
+test("scalar kv keys must be strings", async () => {
+  const plan = await plan0({ kv: { lhId: { a: 1 }, companyId: "c" } });
+  assert.deepEqual(plan.kv, { companyId: "c" });
+});
+
+test("note cards and columns without an id are ignored", async () => {
+  const file = { columns: [{ id: "c1", name: "A" }, { name: "no id" }], cards: [card("k1", "c1", 1, "x"), { title: "no id" }, "x"] };
+  const plan = await plan0({ kv: { notes: file } }, snap({ kv: { notes: board([], []) } }));
+  assert.deepEqual(plan.kv.notes.columns.map((c) => c.id), ["c1"]);
+  assert.deepEqual(plan.kv.notes.cards.map((c) => c.id), ["k1"]);
+});
+
+test("a well-formed record passes through unchanged (apart from timestamps)", async () => {
+  const rec = { id: "s", status: "draft", lhId: null, companyId: "c", bankId: null, bankAuto: true, proformaId: null, createdAt: 5, updatedAt: 6, lang: "tr", state: { meta: { invoiceNo: "1" } }, auto: ["meta.invoiceNo"], parse: null, summary: { invoiceNo: "1", total: 3, missing: [] } };
+  const plan = await plan0({ shipments: [rec] });
+  assert.deepEqual(plan.shipments[0], rec);
+  assert.equal(plan.skipped, 0);
+});
+
+test("company and note card timestamps are clamped too", async () => {
+  const plan = await plan0({ kv: { companies: [{ id: "c", name: "A", updatedAt: NOW * 9 }], notes: board([["c1", "A"]], [card("k", "c1", NOW * 9, "t")]) } });
+  assert.equal(plan.kv.companies[0].updatedAt, NOW);
+  assert.equal(plan.kv.notes.cards[0].updatedAt, NOW);
 });

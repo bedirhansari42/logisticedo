@@ -129,3 +129,35 @@ test("a test downloadPrefix replaces the default prefix", () => {
   assert.equal(isAllowed("http://localhost:8799/dl/v1/a.zip", t), true);
   assert.equal(isAllowed(ASSET, t), false);
 });
+
+// ---- Sertleştirme (güvenlik run-2) ----
+const { CSP, isPermissionAllowed, devEnv } = require("./net-policy.js");
+
+test("app scheme: when a host is given, only that host is allowed", () => {
+  const h = { scheme: "app", host: "logisticedo", devUrl: null };
+  assert.equal(isAllowed("app://logisticedo/index.html", h), true);
+  assert.equal(isAllowed("app://other/x", h), false);
+  assert.equal(isAllowed("app://logisticedo.evil/x", h), false);
+});
+
+test("CSP: no inline or eval script, nothing external, no plugins/frames/forms/base", () => {
+  const d = Object.fromEntries(CSP.split(";").map((x) => x.trim()).filter(Boolean).map((x) => { const [k, ...v] = x.split(/\s+/); return [k, v]; }));
+  assert.deepEqual(d["default-src"], ["'self'"]);
+  assert.ok(d["script-src"].includes("'self'"));
+  for (const bad of ["'unsafe-inline'", "'unsafe-eval'", "*", "https:", "http:", "data:", "blob:"]) assert.equal(d["script-src"].includes(bad), false, bad);
+  for (const k of ["object-src", "frame-src", "base-uri", "form-action"]) assert.deepEqual(d[k], ["'none'"], k);
+  for (const k of Object.keys(d)) for (const v of d[k]) assert.equal(/^https?:|^\*$|^wss?:/.test(v), false, `${k} ${v}`);
+});
+
+test("permissions: everything is denied except persistent storage", () => {
+  for (const p of ["media", "geolocation", "notifications", "midi", "openExternal", "clipboard-read", "hid", "serial", "usb", "display-capture", "pointerLock", "fullscreen", "unknown"])
+    assert.equal(isPermissionAllowed(p), false, p);
+  assert.equal(isPermissionAllowed("persistent-storage"), true);
+});
+
+test("devEnv: development-only variables are ignored in packaged builds", () => {
+  const env = { ELECTRON_START_URL: "http://localhost:5173", LGX_TEST_DIR: "/tmp/x" };
+  assert.deepEqual(devEnv(env, false), { devUrl: "http://localhost:5173", testDir: "/tmp/x" });
+  assert.deepEqual(devEnv(env, true), { devUrl: null, testDir: null });
+  assert.deepEqual(devEnv({}, false), { devUrl: null, testDir: null });
+});
