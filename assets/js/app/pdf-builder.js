@@ -584,7 +584,8 @@ function renderInvoice(ctx, s, kind = "ci") {
     ...(anyCode ? [{ key: "code", title: "Code", min: 34, max: 70 }] : []),
     { key: "desc", title: "Description of Goods", flex: true },
     ...(anyHs ? [{ key: "hs", title: "HS Code", min: 42, max: 64 }] : []),
-    ...(originList(s).length > 1 ? [{ key: "origin", title: "Origin", align: "center", min: 40, max: 80 }] : []),
+    // Menşe sütunu: en az bir menşe biliniyorsa (kalemde ya da sevkiyatın genel menşesi) her zaman; kalemler farklı menşeli olabilir
+    ...(originList(s).length ? [{ key: "origin", title: "Origin", align: "center", min: 40, max: 80 }] : []),
     { key: "qty", title: "Qty", align: "right", min: 30, max: 62 },
     { key: "unit", title: "Unit", align: "center", min: 26, max: 40 },
     ...(hasVal ? [{ key: "price", title: `${isFoc ? "Customs Unit Value" : "Unit Price"}${perLineCur ? "" : " " + cur}`, align: "right", min: 44, max: 72 }] : []),
