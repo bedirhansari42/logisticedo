@@ -2,8 +2,11 @@
 import { buildPdf } from "@engine/pdf-builder.js";
 import { buildXlsx, buildProformaXlsx } from "@engine/excel-builder.js";
 import { safeFileName } from "@engine/doc-model.js";
+import { forPrint } from "../requirements/model.mjs";
 
-export async function buildDownload(kind, s, lh) {
+/** Zorunluluk denetimi çağıranın işi (checkDoc); burada yalnızca "-" işaretleri boş basılır. */
+export async function buildDownload(kind, state, lh) {
+  const s = forPrint(state);
   const base = safeFileName(s.meta.invoiceNo) || "document";
   if (kind === "proforma-xlsx") return { blob: await buildProformaXlsx(s), name: `Proforma-Invoice_${safeFileName(s.meta.proformaNo) || "draft"}.xlsx` };
   if (kind === "xlsx") return { blob: await buildXlsx(s), name: `${s.foc?.enabled ? "FOC" : "CI"}-PL_${base}.xlsx` };

@@ -1,5 +1,6 @@
 /* Sevkiyat kaydının durumu: yeni belge, proforma aktarımı, özet, belge hazırlık durumu. */
 import { createEmptyState, newItem, toInput, uiDec, missingFields, computeTotals, uid } from "@engine/doc-model.js";
+import { checkDoc } from "../requirements/model.mjs";
 
 export const STATUSES = ["draft", "ready", "transit", "delivered"];
 
@@ -224,7 +225,7 @@ export function docStatus(state, doc) {
   const hasItems = state.items.some((it) => it.description || it.qty);
   if (doc === "ci" || doc === "foc" || doc === "pl") {
     if (!hasItems && !state.buyer.name && !state.seller.name) return "empty";
-    return missingFields(state).length ? "partial" : "ready";
+    return missingFields(state).length || checkDoc(state, doc).length ? "partial" : "ready";
   }
   if (doc === "pallet") return state.pallets.length ? "ready" : "empty";
   if (doc === "labels") return hasItems || state.pallets.length ? "ready" : "empty";

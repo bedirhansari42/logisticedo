@@ -136,7 +136,7 @@ export function ItemsTable({ ctx }) {
                     cell = <input className="num" readOnly tabIndex={-1} value={fmtUi(lineAmount(it))} aria-label={aria} />;
                   } else {
                     const numeric = type === "num" || type === "amount";
-                    const placeholder = field === "currency" ? cur : field === "origin" ? state.shipment.countryOrigin : field === "vatRate" ? state.charges.vatRate || "0" : field === "packageType" ? state.packing.packageType : undefined;
+                    const placeholder = ctx.required?.[field]?.has(it.id) ? t("d.req.cellPh") : field === "currency" ? cur : field === "origin" ? state.shipment.countryOrigin : field === "vatRate" ? state.charges.vatRate || "0" : field === "packageType" ? state.packing.packageType : undefined;
                     cell = (
                       <ListInput
                         type="text" value={it[field] ?? ""} list={list} inputMode={numeric ? "decimal" : undefined} placeholder={placeholder}
@@ -145,7 +145,8 @@ export function ItemsTable({ ctx }) {
                       />
                     );
                   }
-                  return <td key={field} className={cls}>{cell}</td>;
+                  const req = ctx.required?.[field]?.has(it.id);
+                  return <td key={field} className={`${cls}${req ? " is-required" : ""}`} data-field={field} title={req ? t("d.req.cell") : undefined}>{cell}</td>;
                 })}
                 <td className="it-act">
                   <button type="button" className="icon-btn icon-btn--plain" title={t("it.dup")} aria-label={t("it.dup")} onClick={() => dup(it.id)} dangerouslySetInnerHTML={{ __html: ICONS.copy }} />

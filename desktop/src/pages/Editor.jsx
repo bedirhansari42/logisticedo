@@ -17,11 +17,14 @@ import { bankLabel } from "../lib/company.js";
 import { useRecordPickers } from "../lib/record-pickers.js";
 import { docGroupsFor } from "../foc/model.mjs";
 import { FocSettings } from "../components/form/FocSettings.jsx";
+import { RULES, checkDoc, stepGaps, requiredCells } from "../requirements/model.mjs";
+import { RequirementNotice, docLabel } from "../components/form/RequirementNotice.jsx";
 
 const STEP_KEYS = Object.keys(STEPS);
 const USES = { ci: [], foc: [], si: ["items"], bl: ["items"], pl: ["general", "items"], pallet: ["items"], contract: ["general", "items", "bank"], bill: ["general", "items", "bank"] };
 
-function stepStatus(state, step) {
+function stepStatus(state, step, gaps) {
+  if (gaps?.length) return "partial";
   if (step === "general") return state.buyer.name && state.seller.name ? "ready" : state.buyer.name || state.seller.name ? "partial" : "empty";
   if (step === "items") return state.items.some((it) => it.description || it.qty) ? "ready" : "empty";
   return state.bank.iban || state.bank.bankName || state.sign.name ? "ready" : "empty";
@@ -36,6 +39,8 @@ export function Editor({ id, step }) {
   const [itemView, setItemView] = useState("invoice");
   const [busyKey, setBusyKey] = useState(null);
   const [parseHidden, setParseHidden] = useState(false);
+  const [focusGap, setFocusGap] = useState(null); // { field, id, at }: eksik ilk hücreye odaklan
+  const [flash, setFlash] = useState(0); // engellenen indirmeden sonra uyarı ışığı kısa süre yanıp söner
   const [showPreview, setShowPreview] = useState(() => { try { return localStorage.getItem("lgx.preview") !== "0"; } catch { return true; } });
   useEffect(() => { try { localStorage.setItem("lgx.preview", showPreview ? "1" : "0"); } catch { /* yoksay */ } }, [showPreview]);
 
@@ -44,6 +49,27 @@ export function Editor({ id, step }) {
   const T = useMemo(() => (state ? computeTotals(state) : null), [state]);
   const company = sh.meta?.companyId ? app.getCompany(sh.meta.companyId) : null;
 
+  // Zorunlu alanlar (requirements/model.mjs): adım başına eksikler; uyarı her zaman görünür
+  const gapsByStep = useMemo(() => (state ? Object.fromEntries(STEP_KEYS.map((k) => [k, stepGaps(state, k)])) : {}), [state]);
+  const required = useMemo(() => requiredCells(Object.values(gapsByStep).flat()), [gapsByStep]);
+
+  // Adım (adres) ve görünüm değiştikten sonra çalışır: hücre o zaman çizilmiş olur
+  useEffect(() => {
+    if (!focusGap || step !== focusGap.step || itemView !== focusGap.view) return undefined;
+    const raf = requestAnimationFrame(() => {
+      const td = document.querySelector(`#itemsTable tr[data-id="${CSS.escape(focusGap.id)}"] td[data-field="${focusGap.field}"]`);
+      td?.scrollIntoView({ block: "center", behavior: "smooth" });
+      td?.querySelector("input, textarea")?.focus({ preventScroll: true });
+      setFocusGap(null);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [focusGap, step, itemView]);
+  useEffect(() => {
+    if (!flash) return undefined;
+    const tm = setTimeout(() => setFlash(0), 2400);
+    return () => clearTimeout(tm);
+  }, [flash]);
+
   const { onCompany, onBank, onLetterhead } = useRecordPickers({ sh, app, state, company, id, t });
   const linkedPf = sh.meta?.proformaId ? app.getProforma(sh.meta.proformaId) : null;
 
@@ -51,7 +77,7 @@ export function Editor({ id, step }) {
     if (!state) return null;
     const ph = (v, d) => (v ? fmtUi(v, d) : "");
     return {
-      state, auto: sh.doc.auto, update: sh.update, lh, T, itemView, setItemView, focMode: !!state.foc.enabled,
+      state, auto: sh.doc.auto, update: sh.update, lh, T, itemView, setItemView, focMode: !!state.foc.enabled, required,
       placeholders: {
         "charges.vat": ph(T.vatCalc, 2),
         "packing.totalPackages": ph(T.itemPkgs, 0),
@@ -60,7 +86,7 @@ export function Editor({ id, step }) {
         "packing.totalVolume": ph(T.itemVol, 3)
       }
     };
-  }, [state, sh.doc?.auto, sh.update, lh, T, itemView]);
+  }, [state, sh.doc?.auto, sh.update, lh, T, itemView, required]);
 
   if (sh.status === "loading") return <div className="page page--center"><Spinner /></div>;
   if (sh.status === "missing") {
@@ -80,7 +106,22 @@ export function Editor({ id, step }) {
   const title = state.meta.invoiceNo.trim() || state.meta.proformaNo.trim() || t("d.untitled");
   const goStep = (k) => go(`/s/${id}/${k}`);
 
+  /** Eksik alanın düzenlendiği adıma ve görünüme gider, ilk boş hücreye odaklanır */
+  const goToGap = (g) => {
+    const r = RULES[g.rule];
+    setItemView(r.view);
+    if (active !== r.step) goStep(r.step);
+    setFocusGap({ field: r.field, id: g.ids[0], step: r.step, view: r.view });
+  };
+
   const onDownload = async (kind) => {
+    const gaps = checkDoc(state, kind);
+    if (gaps.length) {
+      toast(t("d.req.blocked", { doc: docLabel(t, kind) }), "error", 8000);
+      setFlash(Date.now());
+      goToGap(gaps[0]);
+      return;
+    }
     setBusyKey(kind);
     try {
       const { blob, name } = await buildDownload(kind, state, lh);
@@ -163,8 +204,9 @@ export function Editor({ id, step }) {
         <nav className="ed-steps" aria-label={t("d.editor.steps")}>
           <p className="ed-group">{t("d.grp.info")}</p>
           {STEP_KEYS.map((k) => (
-            <button key={k} type="button" className={`ed-step${active === k ? " is-active" : ""}`} onClick={() => goStep(k)}>
-              <Dot s={stepStatus(state, k)} /><span>{t(`d.step.${k}`)}</span>
+            <button key={k} type="button" className={`ed-step${active === k ? " is-active" : ""}${gapsByStep[k]?.length ? " has-req" : ""}`} onClick={() => goStep(k)} title={gapsByStep[k]?.length ? t("d.req.title") : undefined}>
+              <Dot s={stepStatus(state, k, gapsByStep[k])} /><span>{t(`d.step.${k}`)}</span>
+              {gapsByStep[k]?.length > 0 && <span className="visually-hidden">{t("d.req.title")}</span>}
             </button>
           ))}
           {groups.map((g) => (
@@ -179,7 +221,8 @@ export function Editor({ id, step }) {
           ))}
         </nav>
 
-        <div className="ed-form ws-form">
+        <div className={`ed-form ws-form${!isDoc && gapsByStep[active]?.length ? ` req-glow${flash ? " req-glow--flash" : ""}` : ""}`}>
+          <RequirementNotice gaps={isDoc ? checkDoc(state, step) : gapsByStep[active] || []} onGo={goToGap} />
           {active === "general" && sh.meta.parse && !parseHidden && <ParseReport parse={sh.meta.parse} onDismiss={() => setParseHidden(true)} />}
           {isDoc && (USES[step] || ["general", "items"]).length > 0 && (
             <div className="doc-links">

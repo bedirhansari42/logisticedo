@@ -462,3 +462,27 @@ body { overflow: hidden; }
 .tour-list li.is-done .tour-step b { color: var(--text-3); }
 .tour-msg { margin: 0; font-size: 0.875rem; line-height: 1.5; color: var(--text-3); }
 .tour-foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+
+/* --- Zorunlu alanlar (requirements/model.mjs): uyarı ışığı, mesaj, boş hücre ----------------- */
+.ws-form.ed-form.req-glow {
+  box-shadow: inset 0 0 0 2px var(--warn), inset 0 0 36px rgba(240, 199, 106, 0.16);
+  border-radius: var(--r-md);
+  animation: req-breathe 3.2s ease-in-out infinite;
+}
+.ws-form.ed-form.req-glow--flash { animation: req-flash 0.6s ease-in-out 4; }
+@keyframes req-breathe {
+  50% { box-shadow: inset 0 0 0 2px var(--warn), inset 0 0 56px rgba(240, 199, 106, 0.26); }
+}
+@keyframes req-flash {
+  50% { box-shadow: inset 0 0 0 3px var(--warn), inset 0 0 80px rgba(240, 199, 106, 0.42); }
+}
+@media (prefers-reduced-motion: reduce) { .ws-form.ed-form.req-glow, .ws-form.ed-form.req-glow--flash { animation: none; } }
+.req-notice { align-items: flex-start; }
+.req-notice > svg, .req-notice .ico { margin-top: 2px; color: var(--warn); flex: none; }
+.req-text { display: grid; gap: 4px; flex: 1; min-width: 220px; }
+.req-text strong { color: var(--text); font-weight: 600; }
+.req-text p { margin: 0; }
+.ed-step.has-req { color: var(--text); }
+.ed-step.has-req .dot { box-shadow: 0 0 0 3px var(--warn-tint), 0 0 8px var(--warn); }
+.items td.is-required input, .items td.is-required textarea { border-color: var(--warn); background: var(--warn-tint); }
+.items td.is-required input::placeholder { color: var(--warn); opacity: 0.85; }
