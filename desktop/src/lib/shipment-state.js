@@ -1,6 +1,7 @@
 /* Sevkiyat kaydının durumu: yeni belge, proforma aktarımı, özet, belge hazırlık durumu. */
 import { createEmptyState, newItem, toInput, uiDec, missingFields, computeTotals, uid } from "@engine/doc-model.js";
 import { checkDoc } from "../requirements/model.mjs";
+import { normalizePallets, palletStatus } from "@engine/pallets.js";
 
 export const STATUSES = ["draft", "ready", "transit", "delivered"];
 
@@ -108,6 +109,7 @@ export function migrate(saved) {
     else base[k] = saved[k];
   }
   base.items = base.items.map((it) => ({ ...newItem(), ...it }));
+  base.pallets = normalizePallets(base.pallets); // eski biçim (yalnız içerik metni) ve yedekten gelen bozuk satırlar
   return base;
 }
 
@@ -227,7 +229,7 @@ export function docStatus(state, doc) {
     if (!hasItems && !state.buyer.name && !state.seller.name) return "empty";
     return missingFields(state).length || checkDoc(state, doc).length ? "partial" : "ready";
   }
-  if (doc === "pallet") return state.pallets.length ? "ready" : "empty";
+  if (doc === "pallet") { const st = palletStatus(state); return st === "ready" && checkDoc(state, "pallet").length ? "partial" : st; }
   if (doc === "labels") return hasItems || state.pallets.length ? "ready" : "empty";
   const key = STATE_KEY[doc];
   if (!key) return "empty";

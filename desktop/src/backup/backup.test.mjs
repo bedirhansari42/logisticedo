@@ -278,3 +278,27 @@ test("company and note card timestamps are clamped too", async () => {
   assert.equal(plan.kv.companies[0].updatedAt, NOW);
   assert.equal(plan.kv.notes.cards[0].updatedAt, NOW);
 });
+
+// ---- Palet yapısı yedekte (2026-11-26 palet yeniden tasarımı) ----
+globalThis.localStorage ??= { getItem: () => null, setItem() {} };
+globalThis.document ??= { querySelectorAll: () => [], documentElement: { dataset: {} }, title: "" };
+const { normalizePallets } = await import("../../../assets/js/app/pallets.js");
+const shipWith = (pallets) => S({ id: "s", updatedAt: 1, state: { pallets } });
+const restoredPallets = async (pallets) => normalizePallets((await plan0({ shipments: [shipWith(pallets)] })).shipments[0].state.pallets);
+
+test("pallet lines survive backup → restore → normalize", async () => {
+  const out = await restoredPallets([{ id: "p1", no: "1", type: "PALLET", contents: "", dimensions: "120x80x150", net: "", gross: "335", lines: [{ id: "l1", itemId: "a", cartons: "5", qty: "" }] }]);
+  assert.deepEqual(out[0].lines, [{ id: "l1", itemId: "a", cartons: "5", qty: "" }]);
+  assert.deepEqual([out[0].id, out[0].gross, out[0].dimensions], ["p1", "335", "120x80x150"]);
+});
+
+test("old-format pallets from a backup open without loss", async () => {
+  const out = await restoredPallets([{ no: "1", contents: "Pumps" }]);
+  assert.equal(out[0].contents, "Pumps");
+  assert.deepEqual(out[0].lines, []);
+});
+
+test("corrupt pallet lines from a backup are dropped, not fatal", async () => {
+  const out = await restoredPallets([{ no: "1", lines: "x" }, { no: "2", lines: [5, { itemId: {} }, null] }]);
+  assert.deepEqual(out.map((p) => p.lines), [[], []]);
+});

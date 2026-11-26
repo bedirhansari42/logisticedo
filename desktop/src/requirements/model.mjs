@@ -18,10 +18,11 @@ export const RULES = {
   hsCode: { field: "hsCode", step: "items", view: "invoice", msgKey: "d.req.hsCode" }
 };
 
-/** İndirme türü (download.js'teki kind) → zorunlu kurallar. xlsx: CI/FOC + packing list iki sayfalı Excel. */
+/** İndirme türü (download.js'teki kind) → zorunlu kurallar. xlsx: CI/FOC + packing list iki sayfalı Excel; pallet: palet bazlı packing list. */
 export const DOC_RULES = {
   pl: ["hsCode"],
-  xlsx: ["hsCode"]
+  xlsx: ["hsCode"],
+  pallet: ["hsCode"]
 };
 
 export const docsForRule = (ruleId) => Object.keys(DOC_RULES).filter((k) => DOC_RULES[k].includes(ruleId));

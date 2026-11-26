@@ -5,11 +5,13 @@ import { NA, isNA, RULES, DOC_RULES, checkDoc, stepGaps, requiredCells, forPrint
 const item = (o) => ({ id: o.id, description: "", qty: "", hsCode: "", ...o });
 const st = (items) => ({ items });
 
-test("packing list and the two-sheet Excel require HS codes; the commercial invoice does not (yet)", () => {
+test("packing list, pallet list and the two-sheet Excel require HS codes; the commercial invoice does not (yet)", () => {
   assert.deepEqual(DOC_RULES.pl, ["hsCode"]);
   assert.deepEqual(DOC_RULES.xlsx, ["hsCode"]);
+  assert.deepEqual(DOC_RULES.pallet, ["hsCode"]);
   assert.equal(DOC_RULES.ci, undefined);
-  assert.deepEqual(docsForRule("hsCode").sort(), ["pl", "xlsx"]);
+  assert.deepEqual(docsForRule("hsCode").sort(), ["pallet", "pl", "xlsx"]);
+  assert.deepEqual(checkDoc(st([item({ id: "a", description: "x" })]), "pallet"), [{ rule: "hsCode", ids: ["a"] }]);
 });
 
 test("every rule declares where it is edited", () => {
