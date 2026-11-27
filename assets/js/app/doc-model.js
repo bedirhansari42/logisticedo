@@ -39,9 +39,9 @@ export function newPallet(p = {}) {
   return { id: uid(), no: "", type: "PALLET", contents: "", dimensions: "", net: "", gross: "", lines: [], ...p };
 }
 
-/** Palet içerik satırı: bir kalemden kaç kap (cartons) ve/veya ne kadar miktar (qty); sayılar metin olarak tutulur */
+/** Palet içerik satırı: bir kalemden kaç kap (cartons) ve/veya ne kadar miktar (qty), elle kap numarası (cno, boşsa otomatik); sayılar metin olarak tutulur */
 export function newPalletLine(p = {}) {
-  return { id: uid(), itemId: "", cartons: "", qty: "", ...p };
+  return { id: uid(), itemId: "", cartons: "", qty: "", cno: "", ...p };
 }
 
 /** "120x80x150" → m³ (cm ölçülerden); okunamazsa null */
@@ -118,7 +118,7 @@ export function createEmptyState() {
     foc: { enabled: false, reason: "SAMPLE", reasonOther: "", note: "" },
     items: [],
     charges: { freight: "", insurance: "", otherLabel: "", other: "", discount: "", vatRate: "", vat: "" },
-    packing: { packageType: "CARTONS", marks: "", totalPackages: "", totalNet: "", totalGross: "", totalVolume: "" },
+    packing: { packageType: "CARTONS", marks: "", totalPackages: "", totalNet: "", totalGross: "", totalVolume: "", onePallet: false, palletDims: "" },
     bank: { show: true, bankName: "", branch: "", accountName: "", iban: "", swift: "", accountNo: "" },
     sign: { name: "", title: "", place: "", declaration: DEFAULT_DECLARATION, showDeclaration: true },
     options: { amountInWords: true, showWeightsOnInvoice: true, showHsOnPl: true, paper: "A4" }

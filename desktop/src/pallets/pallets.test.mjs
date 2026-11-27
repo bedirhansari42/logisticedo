@@ -38,7 +38,7 @@ test("carton numbers run across pallets", () => {
   const items = [item({ id: "a", packages: "5" }), item({ id: "b", packages: "5" }), item({ id: "c", packages: "3" }), item({ id: "d", packages: "1" })];
   const s = st(items, [pal([line("a", 5, "", "l1"), line("b", 3, "", "l2")]), pal([line("b", 2, "", "l3"), line("c", 3, "", "l4"), line("d", 1, "", "l5")])]);
   const m = P.cartonNumbers(s);
-  assert.deepEqual(["l1", "l2", "l3", "l4", "l5"].map((k) => m.get(k)), ["1-5", "6-8", "9-10", "11-13", "14"]);
+  assert.deepEqual(["l1", "l2", "l3", "l4", "l5"].map((k) => m.get(k)), ["1-5", "6-8", "9-10", "11-13", "14"].map((value) => ({ value, suggested: true })));
 });
 
 test("suggested qty from cartons; an entered qty wins", () => {
@@ -240,7 +240,7 @@ test("a line whose item row was emptied is an orphan and is not printed", () => 
   assert.deepEqual(P.orphanLines(s), ["la"]);
   assert.deepEqual(P.linkedLines(s, p).map((l) => l.id), ["lb"]);
   assert.equal(P.cartonNumbers(s).has("la"), false);
-  assert.equal(P.cartonNumbers(s).get("lb"), "1-2");
+  assert.deepEqual(P.cartonNumbers(s).get("lb"), { value: "1-2", suggested: true });
 });
 
 test("palletIsBlank: only an untouched pallet can be removed without asking", () => {
@@ -273,4 +273,90 @@ test("a whole-number item quantity gets whole-number suggestions; a fractional o
   assert.deepEqual(three("1000"), [333, 334, 333]);
   assert.deepEqual(three("10.1"), [3.367, 3.366, 3.367]);
   assert.deepEqual(three("2"), [1, 0, 1]);
+});
+
+// ---- Packing List: tüm mal tek palette (2026-11-27) ----
+const M = await import("../../../assets/js/app/doc-model.js");
+
+test("singlePalletInfo is null unless the option is on", () => {
+  const s = M.createEmptyState();
+  assert.deepEqual([s.packing.onePallet, s.packing.palletDims], [false, ""]);
+  assert.equal(P.singlePalletInfo(s, M.computeTotals(s)), null);
+});
+
+test("one pallet: packages in words with STC, dims formatted, volume from dims", () => {
+  const s = M.createEmptyState();
+  s.items = [M.newItem({ description: "Pump", qty: "10", packages: "12", packageType: "CARTONS" })];
+  Object.assign(s.packing, { onePallet: true, palletDims: "120x80x150" });
+  assert.deepEqual(P.singlePalletInfo(s, M.computeTotals(s)), { packages: "ONE (1) PALLET, STC TWELVE (12) CARTONS", dims: "120 x 80 x 150 CM", volume: 1.44 });
+});
+
+test("one pallet without packages or dims", () => {
+  const s = M.createEmptyState();
+  s.items = [M.newItem({ description: "Pump", qty: "10" })];
+  s.packing.onePallet = true;
+  assert.deepEqual(P.singlePalletInfo(s, M.computeTotals(s)), { packages: "ONE (1) PALLET", dims: "", volume: null });
+});
+
+test("free-text dims are kept; a typed total volume wins", () => {
+  const s = M.createEmptyState();
+  Object.assign(s.packing, { onePallet: true, palletDims: "approx. 1.2 m", totalVolume: "2" });
+  const r = P.singlePalletInfo(s, M.computeTotals(s));
+  assert.equal(r.dims, "approx. 1.2 m");
+  assert.equal(r.volume, null);
+  s.packing.palletDims = "120x80x150";
+  assert.equal(P.singlePalletInfo(s, M.computeTotals(s)).volume, null);
+});
+
+test("final review #1: dims that are not plain cm numbers give no volume", () => {
+  const s = M.createEmptyState();
+  Object.assign(s.packing, { onePallet: true, palletDims: "1200x800x1500 mm" });
+  assert.deepEqual(P.singlePalletInfo(s, M.computeTotals(s)), { packages: "ONE (1) PALLET", dims: "1200x800x1500 mm", volume: null });
+  s.packing.palletDims = "120x80x150 cm";
+  assert.equal(P.singlePalletInfo(s, M.computeTotals(s)).volume, 1.44);
+});
+
+test("final review #4: goods already counted as pallets are not repeated after STC", () => {
+  const s = M.createEmptyState();
+  s.items = [M.newItem({ description: "Pump", qty: "10", packages: "1", packageType: "PALLETS" })];
+  s.packing.onePallet = true;
+  assert.equal(P.singlePalletInfo(s, M.computeTotals(s)).packages, "ONE (1) PALLET");
+  s.items[0].packageType = "PALLET";
+  assert.equal(P.singlePalletInfo(s, M.computeTotals(s)).packages, "ONE (1) PALLET");
+});
+
+// ---- Elle C/No. (2026-11-27) ----
+
+test("a typed C/No. is kept and later empty lines continue from its last number", () => {
+  const items = [item({ id: "a", packages: "10" })];
+  const s = st(items, [pal([line("a", 5, "", "l1"), line("a", 3, "", "l2")]), pal([line("a", 2, "", "l3")])]);
+  s.pallets[0].lines[0].cno = "101-105";
+  const m = P.cartonNumbers(s);
+  assert.deepEqual(["l1", "l2", "l3"].map((k) => m.get(k)), [{ value: "101-105", suggested: false }, { value: "106-108", suggested: true }, { value: "109-110", suggested: true }]);
+});
+
+test("a typed C/No. without a trailing number does not move the counter", () => {
+  const items = [item({ id: "a", packages: "5" })];
+  const s = st(items, [pal([line("a", 2, "", "l1"), line("a", 3, "", "l2")])]);
+  s.pallets[0].lines[0].cno = "SEE MARKS";
+  assert.deepEqual(P.cartonNumbers(s).get("l2"), { value: "3-5", suggested: true });
+});
+
+test("a typed C/No. on a line without cartons is kept", () => {
+  const s = st([item({ id: "a", qty: "3" })], [pal([line("a", "", 3, "l1")])]);
+  s.pallets[0].lines[0].cno = "7";
+  assert.deepEqual(P.cartonNumbers(s).get("l1"), { value: "7", suggested: false });
+});
+
+test("orphan lines with a typed C/No. are ignored", () => {
+  const s = st([item({ id: "a", packages: "2" })], [pal([line("gone", 1, "", "o"), line("a", 2, "", "l1")])]);
+  s.pallets[0].lines[0].cno = "500";
+  const m = P.cartonNumbers(s);
+  assert.equal(m.has("o"), false);
+  assert.deepEqual(m.get("l1"), { value: "1-2", suggested: true });
+});
+
+test("normalizePallets keeps cno as text", () => {
+  const out = P.normalizePallets([{ lines: [{ itemId: "a", cno: 12 }, { itemId: "b", cno: null }, { itemId: "c" }] }]);
+  assert.deepEqual(out[0].lines.map((l) => l.cno), ["12", "", ""]);
 });

@@ -287,8 +287,8 @@ const shipWith = (pallets) => S({ id: "s", updatedAt: 1, state: { pallets } });
 const restoredPallets = async (pallets) => normalizePallets((await plan0({ shipments: [shipWith(pallets)] })).shipments[0].state.pallets);
 
 test("pallet lines survive backup → restore → normalize", async () => {
-  const out = await restoredPallets([{ id: "p1", no: "1", type: "PALLET", contents: "", dimensions: "120x80x150", net: "", gross: "335", lines: [{ id: "l1", itemId: "a", cartons: "5", qty: "" }] }]);
-  assert.deepEqual(out[0].lines, [{ id: "l1", itemId: "a", cartons: "5", qty: "" }]);
+  const out = await restoredPallets([{ id: "p1", no: "1", type: "PALLET", contents: "", dimensions: "120x80x150", net: "", gross: "335", lines: [{ id: "l1", itemId: "a", cartons: "5", qty: "", cno: "101-105" }] }]);
+  assert.deepEqual(out[0].lines, [{ id: "l1", itemId: "a", cartons: "5", qty: "", cno: "101-105" }]);
   assert.deepEqual([out[0].id, out[0].gross, out[0].dimensions], ["p1", "335", "120x80x150"]);
 });
 

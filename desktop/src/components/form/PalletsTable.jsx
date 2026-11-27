@@ -33,7 +33,7 @@ export function PalletsTable({ ctx }) {
   });
   const editLine = (pid, lid, f, raw) => update((d) => {
     const l = d.pallets.find((x) => x.id === pid)?.lines.find((x) => x.id === lid);
-    if (l) l[f] = f === "cartons" ? cleanCartons(raw) : cleanAmount(raw);
+    if (l) l[f] = f === "cartons" ? cleanCartons(raw) : f === "qty" ? cleanAmount(raw) : raw; // cno: serbest metin
   });
   const removeLine = (pid, lid) => update((d) => { const p = d.pallets.find((x) => x.id === pid); if (p) p.lines = p.lines.filter((l) => l.id !== lid); });
   const removePallet = async (p, name) => {
@@ -127,7 +127,7 @@ export function PalletsTable({ ctx }) {
                           <td className="w-num"><input className="num" inputMode="numeric" value={l.cartons} onChange={(e) => editLine(p.id, l.id, "cartons", e.target.value)} aria-label={`${t("d.pal.cartons")} ${oneLine(it.description)}`} /></td>
                           <td className="w-num"><input className="num" inputMode="decimal" value={l.qty} placeholder={ph(q, fmtN)} onChange={(e) => editLine(p.id, l.id, "qty", e.target.value)} aria-label={`${t("d.pal.qty")} ${oneLine(it.description)}`} /></td>
                           <td className="w-unit pal-ro">{(it.unit || "").toUpperCase()}</td>
-                          <td className="w-cno pal-ro">{cno.get(l.id) || ""}</td>
+                          <td className="w-cno"><input value={l.cno || ""} maxLength={40} placeholder={cno.get(l.id)?.suggested ? cno.get(l.id).value : undefined} onChange={(e) => editLine(p.id, l.id, "cno", e.target.value)} aria-label={`${t("d.pal.cno")} ${oneLine(it.description)}`} /></td>
                           <td className="it-act"><button type="button" className="icon-btn icon-btn--plain icon-btn--danger" title={t("pal.remove")} aria-label={t("pal.remove")} onClick={() => removeLine(p.id, l.id)} dangerouslySetInnerHTML={{ __html: ICONS.trash }} /></td>
                         </tr>
                       );

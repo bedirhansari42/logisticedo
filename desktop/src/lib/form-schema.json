@@ -328,6 +328,27 @@
      "cols": 2
     },
     {
+     "kind": "check",
+     "bind": "packing.onePallet",
+     "labelKey": "f.onePallet",
+     "labelText": "Tüm mal tek palette",
+     "span": 2,
+     "grid": 1,
+     "cols": 2
+    },
+    {
+     "kind": "field",
+     "bind": "packing.palletDims",
+     "control": "input",
+     "labelKey": "f.palletDims",
+     "labelText": "Palet ölçüsü (cm)",
+     "span": 1,
+     "type": "text",
+     "placeholder": "120x80x150",
+     "grid": 1,
+     "cols": 2
+    },
+    {
      "kind": "sub",
      "labelKey": "f.totalsTitle",
      "hintKey": "f.totalsHint"
@@ -341,7 +362,7 @@
      "span": 1,
      "type": "text",
      "inputmode": "decimal",
-     "grid": 1,
+     "grid": 2,
      "cols": 4
     },
     {
@@ -353,7 +374,7 @@
      "span": 1,
      "type": "text",
      "inputmode": "decimal",
-     "grid": 1,
+     "grid": 2,
      "cols": 4
     },
     {
@@ -365,7 +386,7 @@
      "span": 1,
      "type": "text",
      "inputmode": "decimal",
-     "grid": 1,
+     "grid": 2,
      "cols": 4
     },
     {
@@ -377,7 +398,7 @@
      "span": 1,
      "type": "text",
      "inputmode": "decimal",
-     "grid": 1,
+     "grid": 2,
      "cols": 4
     },
     {

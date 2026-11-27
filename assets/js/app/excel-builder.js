@@ -2,6 +2,7 @@
 import { loadExcelJS } from "./loader.js";
 import { focReasonText } from "./foc.js";
 import { cellValue, formula } from "./cell-value.js";
+import { singlePalletInfo } from "./pallets.js";
 import { DEFAULT_PROFORMA_DECLARATION, computeTotals, itemCurrency, itemVatRate, num, lineAmount, fmtDate, amountInWords, itemPackageType, packagesText, packageTypeLabel, round } from "./doc-model.js";
 
 const FONT = "Arial";
@@ -325,12 +326,15 @@ function packingSheet(wb, s) {
   ws.getRow(r).height = 18;
   r += 2;
 
-  const pw = packagesText(s, T, { words: true });
+  const one = singlePalletInfo(s, T); // "tüm mal tek palette" seçeneği: PDF ile aynı metinler
+  const pw = one ? one.packages : packagesText(s, T, { words: true });
+  const vol = T.volume || one?.volume;
   r = infoPairs(ws, r, [
     ["TOTAL PACKAGES", pw],
+    ...(one?.dims ? [["PALLET DIMENSIONS", one.dims]] : []),
     ["NET WEIGHT (KG)", T.net ? round(T.net, 2) : ""],
     ["GROSS WEIGHT (KG)", T.gross ? round(T.gross, 2) : ""],
-    ["VOLUME (M³)", T.volume ? round(T.volume, 3) : ""],
+    ["VOLUME (M³)", vol ? round(vol, 3) : ""],
     ["MARKS & NUMBERS", s.packing.marks]
   ], [[1, 2, 3, 5], [6, 8, 9, 11]]);
   r++;

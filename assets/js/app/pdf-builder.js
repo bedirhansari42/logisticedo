@@ -2,7 +2,7 @@
    Koordinatlar yukarıdan aşağıya (yTop) tutulur, çizimde pdf-lib düzlemine çevrilir. */
 import { loadPdfLib, loadDocFonts } from "./loader.js";
 import { focReasonText } from "./foc.js";
-import { cartonNumbers, lineQty, lineCartons, palletWeight, packageWord, linkedLines, palletTypeWord } from "./pallets.js";
+import { cartonNumbers, lineQty, lineCartons, palletWeight, packageWord, linkedLines, palletTypeWord, singlePalletInfo } from "./pallets.js";
 import {
   computeTotals, itemCurrency, itemVatRate, num, lineAmount, fmtMoney, fmtPrice, fmtQty, fmtWeight, fmtVolume, fmtDate,
   amountInWords, packagesInWords, itemPackageType, packagesText, DEFAULT_ORIGIN_STATEMENT, DEFAULT_ORIGIN_STATEMENT_MIXED, DEFAULT_PROFORMA_DECLARATION, itemOrigin, originList, palletVolume
@@ -733,13 +733,17 @@ function renderPacking(ctx, s) {
   /* Özet + marka/numara */
   d.gap(8);
   const sum = [];
-  const pw = packagesText(s, T, { words: true });
+  const one = singlePalletInfo(s, T); // "tüm mal tek palette" seçeneği (Paketleme adımı)
+  const pw = one ? one.packages : packagesText(s, T, { words: true });
   if (pw) sum.push(["Total Packages", pw]);
+  if (one?.dims) sum.push(["Pallet Dimensions", one.dims]);
   if (T.net) sum.push(["Net Weight", `${fmtWeight(T.net)} KG`]);
   if (T.gross) sum.push(["Gross Weight", `${fmtWeight(T.gross)} KG`]);
-  if (T.volume) sum.push(["Volume", `${fmtVolume(T.volume)} M³`]);
+  const vol = T.volume || one?.volume;
+  if (vol) sum.push(["Volume", `${fmtVolume(vol)} M³`]);
   const blocks = [], fr = [];
-  if (sum.length) { blocks.push(d.kv("Shipment summary", sum, 70)); fr.push(0.5); }
+  const keyW = one ? Math.max(70, ...sum.map(([k]) => d.tw(k, "s", S.small))) + 16 : 70; // "Pallet Dimensions" 70 pt'ye sığmaz
+  if (sum.length) { blocks.push(d.kv("Shipment summary", sum, keyW)); fr.push(0.5); }
   if (s.packing.marks) { blocks.push(d.cell({ label: "Marks & Numbers", lines: [{ text: s.packing.marks, color: C.ink }] })); fr.push(0.5); }
   if (blocks.length) d.row(blocks, fr.length === 1 ? [0.5] : fr);
 
@@ -1222,7 +1226,8 @@ function renderPalletList(ctx, s) {
     { key: "desc", title: "Description of Goods", flex: true },
     ...(showHs ? [{ key: "hs", title: "HS Code", align: "center", min: 42, max: 64 }] : []),
     ...(allLines.length ? [{ key: "qty", title: "Qty", align: "right", min: 40, max: 70 }] : []),
-    ...(ctnTotal ? [{ key: "ctn", title: title(word), align: "right", min: 34, max: 56 }, { key: "cno", title: "C/No.", align: "center", min: 34, max: 56 }] : []),
+    ...(ctnTotal ? [{ key: "ctn", title: title(word), align: "right", min: 34, max: 56 }] : []),
+    ...(ctnTotal || cno.size ? [{ key: "cno", title: "C/No.", align: "center", min: 34, max: 56 }] : []), // elle C/No. koli sayısı olmadan da basılır
     ...(anyDims ? [{ key: "dims", title: "Dimensions (cm)", align: "center", min: 52, max: 88 }] : []),
     { key: "net", title: "Net Wt. (kg)", align: "right", min: 40, max: 64 },
     { key: "gross", title: "Gross Wt. (kg)", align: "right", min: 42, max: 64 },
@@ -1239,7 +1244,7 @@ function renderPalletList(ctx, s) {
       rows.push({ cells: {
         desc: (it.description || "").trim().replace(/\s*\n\s*/g, " "), hs: it.hsCode,
         qty: q != null ? `${fmtQty(q)} ${(it.unit || "").toUpperCase()}`.trim() : "",
-        ctn: lineCartons(l) ? String(lineCartons(l)) : "", cno: cno.get(l.id) || ""
+        ctn: lineCartons(l) ? String(lineCartons(l)) : "", cno: cno.get(l.id)?.value || ""
       } });
     }
   });

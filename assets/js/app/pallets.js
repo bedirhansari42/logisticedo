@@ -1,7 +1,7 @@
 /* Paletler: kalemlere bağlı içerik satırları için saf hesaplar (DOM yok). PDF, etiketler ve masaüstü arayüzü kullanır.
    Palet = { id, no, type, dimensions, net, gross, contents (not), lines: [{ id, itemId, cartons, qty }] }.
    Boş bırakılan miktar ve ağırlıklar kalemlerden önerilir (kalemin kap/miktar payına göre). */
-import { num, round, uid, toInput, newPallet, newPalletLine } from "./doc-model.js";
+import { num, round, uid, toInput, newPallet, newPalletLine, packagesText, packagesInWords, packageTypeLabel, palletVolume } from "./doc-model.js";
 
 const n = (v) => { const x = num(v); return Number.isFinite(x) ? x : null; };
 const pos = (v) => { const x = n(v); return x != null && x > 0 ? x : null; };
@@ -49,7 +49,7 @@ export function normalizePallets(raw) {
     ...(typeof p.id === "string" && p.id ? { id: p.id } : {}),
     no: str(p.no), type: p.type == null ? "PALLET" : str(p.type), contents: str(p.contents), dimensions: str(p.dimensions), net: str(p.net), gross: str(p.gross),
     lines: (Array.isArray(p.lines) ? p.lines : []).filter((l) => isObj(l) && typeof l.itemId === "string" && l.itemId).map((l) => newPalletLine({
-      ...(typeof l.id === "string" && l.id ? { id: l.id } : {}), itemId: l.itemId, cartons: str(l.cartons), qty: str(l.qty)
+      ...(typeof l.id === "string" && l.id ? { id: l.id } : {}), itemId: l.itemId, cartons: str(l.cartons), qty: str(l.qty), cno: str(l.cno)
     }))
   }));
 }
@@ -108,15 +108,24 @@ export function palletWeight(s, p, kind) {
   return { value: round(sum, 2), suggested: true };
 }
 
-/** Kap numaraları (C/No.): paletler boyunca süren aralıklar. Map<satır kimliği, "1-5" | "6"> */
+/** Kap numaraları (C/No.): elle yazılan değer ya da paletler boyunca süren otomatik aralık.
+    Elle değer bir sayıyla bitiyorsa ("101-105") sonraki otomatik numaralar oradan sürer.
+    Map<satır kimliği, { value: "1-5", suggested }> */
 export function cartonNumbers(s) {
   const items = realMap(s), out = new Map();
   let k = 0;
   for (const p of s.pallets || []) for (const l of p.lines || []) {
-    const c = items.has(l.itemId) ? lineCartons(l) : null;
+    if (!items.has(l.itemId)) continue;
+    const c = lineCartons(l), typed = str(l.cno).trim();
+    if (typed) {
+      out.set(l.id, { value: typed, suggested: false });
+      const end = typed.match(/(\d+)\s*$/);
+      k = end ? Number(end[1]) : k + (c || 0);
+      continue;
+    }
     if (!c) continue;
     const a = k + 1; k += c;
-    out.set(l.id, a === k ? String(a) : `${a}-${k}`);
+    out.set(l.id, { value: a === k ? String(a) : `${a}-${k}`, suggested: true });
   }
   return out;
 }
@@ -205,4 +214,21 @@ export function addItemLine(s, palletId, itemId) {
   if (!p || !it) return;
   const r = itemRemaining(s, it);
   p.lines.push(newPalletLine({ itemId, ...(r.cartons ? { cartons: String(r.cartons) } : r.qty ? { qty: toInput(r.qty) } : {}) }));
+}
+
+/** Kalem bazlı Packing List'te "tüm mal tek palette" seçeneği: kapalıysa null; açıksa özet metinleri
+    (packages: "ONE (1) PALLET, STC TWELVE (12) CARTONS", dims: "120 x 80 x 150 CM" ya da yazıldığı gibi,
+    volume: toplam hacim yoksa ölçüden hesaplanan m³). T = computeTotals(s) */
+export function singlePalletInfo(s, T) {
+  if (!s.packing?.onePallet) return null;
+  // Kaplar zaten palet olarak sayılmışsa "STC ONE (1) PALLETS" çelişkisi yazılmaz
+  const allPallets = packageTypeLabel(s, T).split(" / ").every((t) => /^PALLET/i.test(t.trim()));
+  const inner = allPallets ? "" : packagesText(s, T, { words: true });
+  const raw = str(s.packing.palletDims).trim();
+  const m = raw.match(/^(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)\s*(?:cm)?$/i);
+  return {
+    packages: `${packagesInWords(1, "PALLET")}${inner ? `, STC ${inner}` : ""}`,
+    dims: m ? `${m[1]} x ${m[2]} x ${m[3]} CM` : raw,
+    volume: T.volume || !m ? null : palletVolume({ dimensions: `${m[1]}x${m[2]}x${m[3]}` }) // hacim yalnız cm olarak okunan ölçüden
+  };
 }
