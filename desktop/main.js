@@ -3,7 +3,7 @@ const { app, BrowserWindow, Menu, protocol, net, shell, session, dialog, ipcMain
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const { spawn } = require("node:child_process");
-const { isAllowed, isTrustedUrl, isTrustedSender, UPDATE_API_URL, DOWNLOAD_PREFIX: DEFAULT_DOWNLOAD_PREFIX } = require("./net-policy.js");
+const { isAllowed, isTrustedUrl, isTrustedSender, isPermissionAllowed, devEnv, CSP, UPDATE_API_URL, DOWNLOAD_PREFIX: DEFAULT_DOWNLOAD_PREFIX } = require("./net-policy.js");
 
 // Uygulama adı: menü çubuğu, Hakkında penceresi ve Dock bu adı kullanır
 app.setName("logisticedo");
@@ -11,8 +11,9 @@ app.setName("logisticedo");
 const SCHEME = "app";
 const HOST = "logisticedo";
 const ROOT = path.join(__dirname, "app");
-// Geliştirme: ELECTRON_START_URL=http://localhost:5173 electron .  (Vite sunucusunu açar, ağ kilidi yalnızca bu adrese izin verir)
-const DEV_URL = process.env.ELECTRON_START_URL || null;
+// Yalnızca paketlenmemiş (geliştirme) derlemede: ELECTRON_START_URL=http://localhost:5173 electron .  (Vite sunucusunu açar,
+// ağ kilidi yalnızca bu adrese izin verir) ve LGX_TEST_DIR (otomatik testler). Paketli sürüm ikisini de yok sayar.
+const { devUrl: DEV_URL, testDir: TEST_DIR } = devEnv(process.env, app.isPackaged);
 // Sürüm kontrolü adresi. LGX_UPDATE_URL yalnızca paketlenmemiş (geliştirme) derlemede geçerlidir.
 const UPDATE_URL = (!app.isPackaged && process.env.LGX_UPDATE_URL) || UPDATE_API_URL;
 // Paket indirme öneki: test sunucusunda (yalnızca paketlenmemiş) o sunucunun /dl/ yolu.
@@ -26,7 +27,7 @@ protocol.registerSchemesAsPrivileged([
 
 // Otomatik testlerde pencere başka pencerelerin arkasında kalabilir; Chromium bu durumda çizim zamanlayıcılarını
 // (requestAnimationFrame) durdurur ve pdf.js bekler. Yalnızca test modunda kısıtlama kapatılır.
-const TEST_MODE = !!process.env.LGX_TEST_DIR;
+const TEST_MODE = !!TEST_DIR;
 if (TEST_MODE) {
   app.commandLine.appendSwitch("disable-renderer-backgrounding");
   app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
@@ -41,25 +42,39 @@ app.on("second-instance", () => {
 
 async function serveFile(request) {
   const url = new URL(request.url);
-  let rel = decodeURIComponent(url.pathname);
+  if (url.host !== HOST) return new Response("Forbidden", { status: 403 });
+  let rel;
+  try { rel = decodeURIComponent(url.pathname); } catch { return new Response("Bad request", { status: 400 }); }
   if (rel === "/") rel = "/index.html";
+  if (rel.includes("\0")) return new Response("Bad request", { status: 400 });
   const file = path.normalize(path.join(ROOT, rel));
   if (file !== ROOT && !file.startsWith(ROOT + path.sep)) {
     return new Response("Forbidden", { status: 403 });
   }
   try {
     const res = await net.fetch(pathToFileURL(file).toString());
-    return res;
+    // İçerik güvenlik politikası: sayfaya ve worker'lara (net-policy.js'te, testli)
+    const headers = new Headers(res.headers);
+    headers.set("Content-Security-Policy", CSP);
+    headers.set("X-Content-Type-Options", "nosniff");
+    return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
   } catch {
     return new Response("Not found", { status: 404 });
   }
+}
+
+// Kamera, mikrofon, konum, bildirim vb. hiçbir izin verilmez (yalnızca kalıcı depolama).
+function lockPermissions(ses) {
+  ses.setPermissionRequestHandler((_wc, permission, cb) => cb(isPermissionAllowed(permission)));
+  ses.setPermissionCheckHandler((_wc, permission) => isPermissionAllowed(permission));
+  ses.setDevicePermissionHandler(() => false);
 }
 
 // "Dosyalar cihazdan çıkmaz" vaadini uygulama düzeyinde zorla: uygulama dışına yalnızca sürüm kontrolü için
 // tek bir GitHub adresi açıktır (karar net-policy.js'de, testli).
 function lockNetwork(ses) {
   ses.webRequest.onBeforeRequest((details, cb) => {
-    cb({ cancel: !isAllowed(details.url, { scheme: SCHEME, devUrl: DEV_URL, updateUrl: UPDATE_URL, downloadPrefix: DOWNLOAD_PREFIX, method: details.method, fromRenderer: details.webContentsId != null }) });
+    cb({ cancel: !isAllowed(details.url, { scheme: SCHEME, host: HOST, devUrl: DEV_URL, updateUrl: UPDATE_URL, downloadPrefix: DOWNLOAD_PREFIX, method: details.method, fromRenderer: details.webContentsId != null }) });
   });
 }
 
@@ -119,7 +134,7 @@ function buildMenu() {
 
 // Test için: LGX_TEST_DIR verilirse indirmeler sormadan o klasöre kaydedilir. Normalde kaydetme penceresi açılır.
 function hookDownloads(ses) {
-  const dir = process.env.LGX_TEST_DIR;
+  const dir = TEST_DIR;
   if (!dir) return;
   ses.on("will-download", (_e, item) => item.setSavePath(path.join(dir, item.getFilename())));
 }
@@ -132,7 +147,9 @@ app.whenReady().then(() => {
   require("./update-download.js").cleanupDir(path.join(app.getPath("temp"), "logisticedo-update"));
   if (process.platform === "darwin" && app.isPackaged) require("./update-apply.js").finishMacUpdate(process.execPath);
   require("./backup-main.js").register({
-    dialog, ipcMain, getWindow: () => win, testDir: process.env.LGX_TEST_DIR || null,
+    dialog, ipcMain, getWindow: () => win, testDir: TEST_DIR,
+    // otomatik yedek yalnızca kullanıcının pencereden seçtiği klasörlere yazar
+    folders: require("./backup-main.js").createFolderStore(path.join(app.getPath("userData"), "backup-folders.json")),
     // yalnızca kendi sayfamızdan gelen istekler (uygulama protokolü ya da geliştirme sunucusu)
     isTrusted: (e) => isTrustedSender(e, { scheme: SCHEME, host: HOST, devUrl: DEV_URL })
   });
@@ -142,6 +159,7 @@ app.whenReady().then(() => {
   });
   protocol.handle(SCHEME, serveFile);
   lockNetwork(session.defaultSession);
+  lockPermissions(session.defaultSession);
   buildMenu();
   createWindow();
   app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });

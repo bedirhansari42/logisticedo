@@ -241,6 +241,10 @@
                 <div class="field"><label for="f_pt" data-i18n="f.packageType">Varsayılan kap cinsi</label><input class="input" id="f_pt" data-bind="packing.packageType" list="dl-pkg" autocapitalize="characters"></div>
                 <div class="field"><label for="f_marks" data-i18n="f.marks">Marka ve numaralar</label><textarea class="textarea" rows="2" id="f_marks" data-bind="packing.marks" data-i18n-attr="placeholder:f.marksPh"></textarea></div>
               </div>
+              <div class="fgrid fgrid--2">
+                <label class="check span-2"><input type="checkbox" data-bind="packing.onePallet"><span data-i18n="f.onePallet">Tüm mal tek palette</span></label>
+                <div class="field"><label for="f_pdims" data-i18n="f.palletDims">Palet ölçüsü (cm)</label><input class="input" id="f_pdims" data-bind="packing.palletDims" placeholder="120x80x150"></div>
+              </div>
               <div class="sub-head">
                 <span class="field-label" data-i18n="f.totalsTitle">Toplamlar</span>
                 <span class="muted" data-i18n="f.totalsHint">Boş bırakılırsa kalemlerden hesaplanır.</span>

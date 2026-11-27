@@ -34,8 +34,14 @@ export function todayIso() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** Palet: başlık bilgileri + kalemlere bağlı içerik satırları (lines). contents: serbest not (eski kayıtlarda eski içerik metni). */
 export function newPallet(p = {}) {
-  return { id: uid(), no: "", type: "PALLET", contents: "", dimensions: "", net: "", gross: "", ...p };
+  return { id: uid(), no: "", type: "PALLET", contents: "", dimensions: "", net: "", gross: "", lines: [], ...p };
+}
+
+/** Palet içerik satırı: bir kalemden kaç kap (cartons) ve/veya ne kadar miktar (qty), elle kap numarası (cno, boşsa otomatik); sayılar metin olarak tutulur */
+export function newPalletLine(p = {}) {
+  return { id: uid(), itemId: "", cartons: "", qty: "", cno: "", ...p };
 }
 
 /** "120x80x150" → m³ (cm ölçülerden); okunamazsa null */
@@ -112,7 +118,7 @@ export function createEmptyState() {
     foc: { enabled: false, reason: "SAMPLE", reasonOther: "", note: "" },
     items: [],
     charges: { freight: "", insurance: "", otherLabel: "", other: "", discount: "", vatRate: "", vat: "" },
-    packing: { packageType: "CARTONS", marks: "", totalPackages: "", totalNet: "", totalGross: "", totalVolume: "" },
+    packing: { packageType: "CARTONS", marks: "", totalPackages: "", totalNet: "", totalGross: "", totalVolume: "", onePallet: false, palletDims: "" },
     bank: { show: true, bankName: "", branch: "", accountName: "", iban: "", swift: "", accountNo: "" },
     sign: { name: "", title: "", place: "", declaration: DEFAULT_DECLARATION, showDeclaration: true },
     options: { amountInWords: true, showWeightsOnInvoice: true, showHsOnPl: true, paper: "A4" }
@@ -151,7 +157,10 @@ export function relocalize(state, fromLang, toLang) {
   for (const it of state.items) for (const k of ["qty", "unitPrice", "vatRate", "amount", "packages", "netWeight", "grossWeight", "volume"]) if (it[k] !== "") it[k] = conv(it[k]);
   for (const k of ["freight", "insurance", "other", "discount", "vatRate", "vat"]) if (state.charges[k] !== "") state.charges[k] = conv(state.charges[k]);
   for (const k of ["totalPackages", "totalNet", "totalGross", "totalVolume"]) if (state.packing[k] !== "") state.packing[k] = conv(state.packing[k]);
-  for (const p of state.pallets || []) for (const k of ["net", "gross"]) if (p[k] !== "") p[k] = conv(p[k]);
+  for (const p of state.pallets || []) {
+    for (const k of ["net", "gross"]) if (p[k] !== "") p[k] = conv(p[k]);
+    for (const l of p.lines || []) for (const k of ["cartons", "qty"]) if (l[k] !== "") l[k] = conv(l[k]);
+  }
   if (state.trans && state.trans.freight !== "") state.trans.freight = conv(state.trans.freight);
   if (state.ins && state.ins.extraPct !== "") state.ins.extraPct = conv(state.ins.extraPct);
   if (state.cmr && state.cmr.cod !== "") state.cmr.cod = conv(state.cmr.cod);

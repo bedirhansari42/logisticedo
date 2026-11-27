@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { CONTAINERS } from "./containers.mjs";
 import { validatePlan } from "./validate.mjs";
-import { planLoad } from "./pack.mjs";
+import { planLoad, planOnce, betterLoad } from "./pack.mjs";
 
 let n = 0;
 const item = (o) => ({ id: `i${++n}`, name: "x", l: 50, w: 50, h: 50, qty: 1, palletized: false, upright: false, ...o });
@@ -362,4 +362,86 @@ test("cylinder: validator rejects overlapping circles and box-on-cylinder", () =
   assert.equal(validatePlan(C, [c1, c3]).ok, true);
   const box = { itemId: "b", x: 0, y: 0, z: 100, dx: 60, dy: 60, dz: 20, pallet: false, seq: 2 };
   assert.equal(validatePlan(C, [c1, box]).ok, false);
+});
+
+// ---- Karışık diziliş sırası (2026-11-27) ----
+const totalUnits = (items) => items.reduce((a, it) => a + it.qty, 0);
+const unplacedAll = (r) => r.unplaced.reduce((a, u) => a + u.count, 0);
+const mixedLoad = () => [
+  item({ l: 100, w: 62, h: 61, qty: 56, palletized: true, upright: true }),
+  item({ l: 118, w: 67, h: 92, qty: 81 }),
+  item({ l: 67, w: 43, h: 37, qty: 38, upright: true })
+];
+
+test("mixed order: never worse than the grouped order (random loads)", () => {
+  const R = rng(2026);
+  for (let k = 0; k < 25; k++) {
+    const n = 2 + Math.floor(R() * 4);
+    const items = Array.from({ length: n }, () => item({ l: 40 + Math.round(R() * 80), w: 30 + Math.round(R() * 60), h: 30 + Math.round(R() * 90), qty: 10 + Math.floor(R() * 50), palletized: R() < 0.15, upright: R() < 0.5 }));
+    const best = planLoad(items, "40"), grouped = planOnce(items, "40", { order: "group" });
+    assert.ok(unplacedAll(best) <= unplacedAll(grouped), `case ${k}: unplaced`);
+    if (unplacedAll(best) === unplacedAll(grouped)) assert.ok(best.containers.length <= grouped.containers.length, `case ${k}: containers`);
+    checkValid(best);
+  }
+});
+
+test("mixed order: non-stackable pallets no longer take a container on their own", () => {
+  const items = mixedLoad();
+  const best = planLoad(items, "40"), grouped = planOnce(items, "40", { order: "group" });
+  assert.ok(best.containers.length <= grouped.containers.length);
+  assert.ok(best.containers[0].fillPct > grouped.containers[0].fillPct + 20, `${best.containers[0].fillPct} vs ${grouped.containers[0].fillPct}`);
+  checkValid(best);
+});
+
+test("mixed order: every order gives a valid plan that accounts for every unit", () => {
+  const items = mixedLoad();
+  for (const order of ["group", "volume", "height"]) {
+    const r = planOnce(items, "40", { order });
+    checkValid(r);
+    assert.equal(all(r).length + unplacedAll(r), totalUnits(items), order);
+  }
+});
+
+test("mixed order: a single item plan is unchanged", () => {
+  const items = [item({ l: 120, w: 80, h: 100, qty: 30 })];
+  assert.deepEqual(planLoad(items, "20").containers, planOnce(items, "20", { order: "group" }).containers);
+});
+
+test("mixed order: deterministic", () => {
+  const items = mixedLoad();
+  assert.deepEqual(planLoad(items, "40"), planLoad(items, "40"));
+});
+
+// ---- Son inceleme: gereksiz adaylar ve küçük farklar (2026-11-27) ----
+test("mixed order: a load that fits one container is not re-planned", () => {
+  const r = planLoad([item({ l: 60, w: 40, h: 40, qty: 20 }), item({ l: 50, w: 30, h: 30, qty: 20 })], "40");
+  assert.equal(r.containers.length, 1);
+  assert.deepEqual(r.orders, ["group"]);
+});
+
+test("mixed order: a capped plan is not re-planned", () => {
+  const r = planLoad([item({ l: 10, w: 10, h: 10, qty: 500 }), item({ l: 12, w: 12, h: 12, qty: 500 })], "20", { maxWork: 1000 });
+  assert.equal(r.capped, true);
+  assert.deepEqual(r.orders, ["group"]);
+});
+
+test("mixed order: an order that gives the same item sequence is skipped", () => {
+  // büyük ayak izi = büyük hacim = yüksek: üç sıra da aynı kalem dizisi
+  const r = planLoad([item({ l: 120, w: 100, h: 120, qty: 40 }), item({ l: 60, w: 40, h: 40, qty: 300 })], "20");
+  assert.ok(r.containers.length > 1);
+  assert.deepEqual(r.orders, ["group"]);
+});
+
+test("mixed order: tried orders are listed when they differ", () => {
+  // büyük koli hem en hacimli hem en yüksek: "height" sırası "volume" ile aynı dizi → atlanır
+  const r = planLoad(mixedLoad(), "40");
+  assert.deepEqual(r.orders, ["group", "volume"]);
+});
+
+test("betterLoad: a fuller first container must win by at least 1% of the container", () => {
+  const C = CONTAINERS["40"], vol = C.L * C.W * C.H;
+  const res = (vols) => ({ unplaced: [], fill: null, containers: vols.map((v) => ({ usedVolumeCm3: v })) });
+  assert.equal(betterLoad(res([0.5 * vol + 0.009 * vol, 0.3 * vol]), res([0.5 * vol, 0.309 * vol]), C), false);
+  assert.equal(betterLoad(res([0.52 * vol, 0.28 * vol]), res([0.5 * vol, 0.3 * vol]), C), true);
+  assert.equal(betterLoad(res([0.5 * vol]), res([0.4 * vol, 0.1 * vol]), C), true);
 });

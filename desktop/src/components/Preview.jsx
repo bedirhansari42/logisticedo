@@ -3,6 +3,7 @@ import { ICONS } from "@common";
 import { buildPdf } from "@engine/pdf-builder.js";
 import { renderPdfInto } from "@engine/preview.js";
 import { missingFields } from "@engine/doc-model.js";
+import { forPrint } from "../requirements/model.mjs";
 import { useT } from "../lib/i18n.js";
 import { Icon, Spinner } from "./Icons.jsx";
 
@@ -53,7 +54,7 @@ export function Preview({ state, lh, doc, onDownload, busyKey, xlsxKind = "xlsx"
     const timer = setTimeout(async () => {
       const loadTimer = setTimeout(() => { if (!cancelled) setBusy(true); }, 180);
       try {
-        const bytes = await buildPdf(state, lh, doc);
+        const bytes = await buildPdf(forPrint(state), lh, doc); // önizleme = indirilen dosya ("-" boş basılır)
         if (cancelled) return;
         bytesRef.current = bytes;
         const n = await renderPdfInto(pagesRef.current, bytes);
@@ -134,7 +135,7 @@ function BigPreview({ title, bytesRef, state, lh, doc, onClose, onDownload }) {
     let alive = true;
     (async () => {
       try {
-        const bytes = bytesRef.current || await buildPdf(state, lh, doc);
+        const bytes = bytesRef.current || await buildPdf(forPrint(state), lh, doc);
         bigBytes.current = bytes;
         if (alive) await renderPdfInto(pages.current, bytes);
       } catch (e) { console.error(e); } finally { if (alive) setLoading(false); }

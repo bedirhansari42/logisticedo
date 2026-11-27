@@ -7,11 +7,15 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+# Varsayılan: salt okunur. Yazma izni yalnızca release'e yükleyen işte.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
+    permissions:
+      contents: write # GitHub Release'e yükleme için
+    timeout-minutes: 60 # takılan bir derleme 6 saat (varsayılan) çalışmasın; kuyrukta bekleme süreye sayılmaz
     strategy:
       fail-fast: false
       matrix:
@@ -25,9 +29,12 @@ jobs:
       run:
         working-directory: desktop
     steps:
-      - uses: actions/checkout@v4
+      # Üçüncü taraf action'lar commit SHA'sına sabit (etiket sonradan değiştirilse de aynı kod çalışır)
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false # derleme adımları jetonu git ayarında görmesin
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -56,7 +63,7 @@ jobs:
 
       - name: GitHub Release'e yükle
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: |
             desktop/dist/*.dmg

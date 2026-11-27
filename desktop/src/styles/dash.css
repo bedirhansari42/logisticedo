@@ -462,3 +462,52 @@ body { overflow: hidden; }
 .tour-list li.is-done .tour-step b { color: var(--text-3); }
 .tour-msg { margin: 0; font-size: 0.875rem; line-height: 1.5; color: var(--text-3); }
 .tour-foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+
+/* --- Zorunlu alanlar (requirements/model.mjs): uyarı ışığı, mesaj, boş hücre ----------------- */
+.ws-form.ed-form.req-glow {
+  box-shadow: inset 0 0 0 2px var(--warn), inset 0 0 36px rgba(240, 199, 106, 0.16);
+  border-radius: var(--r-md);
+  animation: req-breathe 3.2s ease-in-out infinite;
+}
+.ws-form.ed-form.req-glow--flash { animation: req-flash 0.6s ease-in-out 4; }
+@keyframes req-breathe {
+  50% { box-shadow: inset 0 0 0 2px var(--warn), inset 0 0 56px rgba(240, 199, 106, 0.26); }
+}
+@keyframes req-flash {
+  50% { box-shadow: inset 0 0 0 3px var(--warn), inset 0 0 80px rgba(240, 199, 106, 0.42); }
+}
+@media (prefers-reduced-motion: reduce) { .ws-form.ed-form.req-glow, .ws-form.ed-form.req-glow--flash { animation: none; } }
+.req-notice { align-items: flex-start; }
+.req-notice > svg, .req-notice .ico { margin-top: 2px; color: var(--warn); flex: none; }
+.req-text { display: grid; gap: 4px; flex: 1; min-width: 220px; }
+.req-text strong { color: var(--text); font-weight: 600; }
+.req-text p { margin: 0; }
+.ed-step.has-req { color: var(--text); }
+.ed-step.has-req .dot { box-shadow: 0 0 0 3px var(--warn-tint), 0 0 8px var(--warn); }
+.items td.is-required input, .items td.is-required textarea { border-color: var(--warn); background: var(--warn-tint); }
+.items td.is-required input::placeholder { color: var(--warn); opacity: 0.85; }
+
+/* --- Palet bazlı packing list (PalletsTable.jsx) ---------------------------------------------- */
+.pal-list { display: grid; gap: 14px; }
+.pal-card { display: grid; gap: 10px; padding: 14px; border-radius: var(--r-md); background: var(--surface-2); }
+.pal-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.pal-head .icon-btn { margin-left: auto; }
+.pal-f { display: grid; gap: 4px; min-width: 0; }
+.pal-f > span { font-size: 0.6875rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+.pal-f input { width: 100%; min-height: 34px; padding: 6px 9px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: 0.875rem; }
+.pal-f input:focus { outline: none; border-color: var(--green); }
+.pal-f input.num { text-align: right; font-variant-numeric: tabular-nums; }
+.pal-head .pal-f { flex: 0 1 190px; }
+.pal-head .pal-f--no { flex: 0 0 72px; }
+.pal-head .pal-f--num { flex: 0 1 110px; }
+.pal-f select { width: 100%; min-height: 34px; padding: 6px 9px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: 0.875rem; }
+.pal-f select:focus { outline: none; border-color: var(--green); }
+.pal-lines .pal-desc { padding: 9px 8px; color: var(--text); }
+.pal-lines .pal-ro { padding: 9px 6px; color: var(--text-2); text-align: center; font-variant-numeric: tabular-nums; }
+.items .w-cno { width: 78px; min-width: 78px; }
+.pal-foot { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; }
+.pal-foot .select { width: auto; min-width: 200px; min-height: 34px; padding-top: 6px; padding-bottom: 6px; font-size: 0.8125rem; }
+.pal-note { flex: 1 1 260px; }
+.pal-ok { color: var(--green-ink); font-size: 0.875rem; }
+.pal-alloc { align-items: flex-start; }
+.pal-alloc > svg { margin-top: 2px; color: var(--warn); flex: none; }

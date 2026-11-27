@@ -393,6 +393,8 @@ const STRINGS = {
 
     "f.packageType": "Varsayılan kap cinsi",
     "f.marks": "Marka ve numaralar (Marks & Nos)",
+    "f.onePallet": "Tüm mal tek palette",
+    "f.palletDims": "Palet ölçüsü (cm)",
     "f.marksPh": "ör. ABC / HAMBURG / 1-24",
     "f.totalsTitle": "Toplamlar",
     "f.totalsHint": "Boş bırakılırsa kalemlerden hesaplanır.",
@@ -841,6 +843,8 @@ const STRINGS = {
 
     "f.packageType": "Default package type",
     "f.marks": "Marks & numbers",
+    "f.onePallet": "All goods on one pallet",
+    "f.palletDims": "Pallet dimensions (cm)",
     "f.marksPh": "e.g. ABC / HAMBURG / 1-24",
     "f.totalsTitle": "Totals",
     "f.totalsHint": "Calculated from the items if left empty.",

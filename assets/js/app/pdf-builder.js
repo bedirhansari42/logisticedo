@@ -2,6 +2,7 @@
    Koordinatlar yukarıdan aşağıya (yTop) tutulur, çizimde pdf-lib düzlemine çevrilir. */
 import { loadPdfLib, loadDocFonts } from "./loader.js";
 import { focReasonText } from "./foc.js";
+import { cartonNumbers, lineQty, lineCartons, palletWeight, packageWord, linkedLines, palletTypeWord, singlePalletInfo } from "./pallets.js";
 import {
   computeTotals, itemCurrency, itemVatRate, num, lineAmount, fmtMoney, fmtPrice, fmtQty, fmtWeight, fmtVolume, fmtDate,
   amountInWords, packagesInWords, itemPackageType, packagesText, DEFAULT_ORIGIN_STATEMENT, DEFAULT_ORIGIN_STATEMENT_MIXED, DEFAULT_PROFORMA_DECLARATION, itemOrigin, originList, palletVolume
@@ -583,7 +584,8 @@ function renderInvoice(ctx, s, kind = "ci") {
     ...(anyCode ? [{ key: "code", title: "Code", min: 34, max: 70 }] : []),
     { key: "desc", title: "Description of Goods", flex: true },
     ...(anyHs ? [{ key: "hs", title: "HS Code", min: 42, max: 64 }] : []),
-    ...(originList(s).length > 1 ? [{ key: "origin", title: "Origin", align: "center", min: 40, max: 80 }] : []),
+    // Menşe sütunu: en az bir menşe biliniyorsa (kalemde ya da sevkiyatın genel menşesi) her zaman; kalemler farklı menşeli olabilir
+    ...(originList(s).length ? [{ key: "origin", title: "Origin", align: "center", min: 40, max: 80 }] : []),
     { key: "qty", title: "Qty", align: "right", min: 30, max: 62 },
     { key: "unit", title: "Unit", align: "center", min: 26, max: 40 },
     ...(hasVal ? [{ key: "price", title: `${isFoc ? "Customs Unit Value" : "Unit Price"}${perLineCur ? "" : " " + cur}`, align: "right", min: 44, max: 72 }] : []),
@@ -731,13 +733,17 @@ function renderPacking(ctx, s) {
   /* Özet + marka/numara */
   d.gap(8);
   const sum = [];
-  const pw = packagesText(s, T, { words: true });
+  const one = singlePalletInfo(s, T); // "tüm mal tek palette" seçeneği (Paketleme adımı)
+  const pw = one ? one.packages : packagesText(s, T, { words: true });
   if (pw) sum.push(["Total Packages", pw]);
+  if (one?.dims) sum.push(["Pallet Dimensions", one.dims]);
   if (T.net) sum.push(["Net Weight", `${fmtWeight(T.net)} KG`]);
   if (T.gross) sum.push(["Gross Weight", `${fmtWeight(T.gross)} KG`]);
-  if (T.volume) sum.push(["Volume", `${fmtVolume(T.volume)} M³`]);
+  const vol = T.volume || one?.volume;
+  if (vol) sum.push(["Volume", `${fmtVolume(vol)} M³`]);
   const blocks = [], fr = [];
-  if (sum.length) { blocks.push(d.kv("Shipment summary", sum, 70)); fr.push(0.5); }
+  const keyW = one ? Math.max(70, ...sum.map(([k]) => d.tw(k, "s", S.small))) + 16 : 70; // "Pallet Dimensions" 70 pt'ye sığmaz
+  if (sum.length) { blocks.push(d.kv("Shipment summary", sum, keyW)); fr.push(0.5); }
   if (s.packing.marks) { blocks.push(d.cell({ label: "Marks & Numbers", lines: [{ text: s.packing.marks, color: C.ink }] })); fr.push(0.5); }
   if (blocks.length) d.row(blocks, fr.length === 1 ? [0.5] : fr);
 
@@ -1198,35 +1204,68 @@ function renderPalletList(ctx, s) {
   d.infoGrid(shipmentPairs(s, "pl"));
   d.gap(9);
 
+  // Paletler kalemlere bağlı satırlarla: her palet bir başlık satırı, altında not ve içerik satırları (pallets.js)
   const pal = s.pallets;
+  const items = new Map(s.items.map((it) => [it.id, it]));
+  const cno = cartonNumbers(s);
+  const linked = (p) => linkedLines(s, p);
+  const allLines = pal.flatMap(linked);
   const vols = pal.map((p) => palletVolume(p));
+  const nets = pal.map((p) => palletWeight(s, p, "net").value);
+  const grosses = pal.map((p) => palletWeight(s, p, "gross").value);
   const anyVol = vols.some((v) => v != null);
   const anyDims = pal.some((p) => String(p.dimensions).trim());
-  const sum = (k) => pal.reduce((a, p) => a + (num(p[k]) || 0), 0);
+  const ctnTotal = allLines.reduce((a, l) => a + (lineCartons(l) || 0), 0);
+  const word = packageWord(s);
+  const showHs = s.options.showHsOnPl && allLines.some((l) => items.get(l.itemId).hsCode);
+  const total = (arr) => (arr.some((v) => v != null) ? arr.reduce((a, v) => a + (v || 0), 0) : null);
+  const netSum = total(nets), grossSum = total(grosses), volSum = anyVol ? vols.reduce((a, v) => a + (v || 0), 0) : null;
+  const title = (w) => w.charAt(0) + w.slice(1).toLowerCase();
   const cols = [
-    { key: "no", title: "Pallet / Pkg No.", align: "center", min: 40, max: 62 },
-    { key: "type", title: "Type", align: "center", min: 54, max: 76 },
-    { key: "contents", title: "Contents", flex: true },
+    { key: "no", title: "Pallet / Pkg No.", min: 52, max: 78 },
+    { key: "desc", title: "Description of Goods", flex: true },
+    ...(showHs ? [{ key: "hs", title: "HS Code", align: "center", min: 42, max: 64 }] : []),
+    ...(allLines.length ? [{ key: "qty", title: "Qty", align: "right", min: 40, max: 70 }] : []),
+    ...(ctnTotal ? [{ key: "ctn", title: title(word), align: "right", min: 34, max: 56 }] : []),
+    ...(ctnTotal || cno.size ? [{ key: "cno", title: "C/No.", align: "center", min: 34, max: 56 }] : []), // elle C/No. koli sayısı olmadan da basılır
     ...(anyDims ? [{ key: "dims", title: "Dimensions (cm)", align: "center", min: 52, max: 88 }] : []),
     { key: "net", title: "Net Wt. (kg)", align: "right", min: 40, max: 64 },
     { key: "gross", title: "Gross Wt. (kg)", align: "right", min: 42, max: 64 },
     ...(anyVol ? [{ key: "vol", title: "Volume (m³)", align: "right", min: 38, max: 56 }] : [])
   ];
-  const rows = pal.map((p, i) => ({
-    cells: { no: p.no || String(i + 1), type: (p.type || "").toUpperCase(), contents: p.contents, dims: p.dimensions, net: fmtWeight(num(p.net)), gross: fmtWeight(num(p.gross)), vol: vols[i] != null ? fmtVolume(vols[i]) : "" }
-  }));
-  if (!rows.length) rows.push({ cells: { contents: "—" } });
-  else rows.push({ bold: true, fill: true, cells: { contents: `TOTAL: ${pal.length} PALLET / PACKAGE(S)`, net: sum("net") ? fmtWeight(sum("net")) : "", gross: sum("gross") ? fmtWeight(sum("gross")) : "", vol: anyVol ? fmtVolume(vols.reduce((a, v) => a + (v || 0), 0)) : "" } });
+  const w = (v) => (v == null ? "" : fmtWeight(v));
+  const rows = [];
+  pal.forEach((p, i) => {
+    rows.push({ bold: true, fill: true, cells: { no: [palletTypeWord(p.type), p.no || String(i + 1)].filter(Boolean).join(" "), dims: p.dimensions, net: w(nets[i]), gross: w(grosses[i]), vol: vols[i] != null ? fmtVolume(vols[i]) : "" } });
+    if (String(p.contents || "").trim()) rows.push({ cells: { desc: p.contents } });
+    for (const l of linked(p)) {
+      const it = items.get(l.itemId);
+      const q = lineQty(s, l, it).value;
+      rows.push({ cells: {
+        desc: (it.description || "").trim().replace(/\s*\n\s*/g, " "), hs: it.hsCode,
+        qty: q != null ? `${fmtQty(q)} ${(it.unit || "").toUpperCase()}`.trim() : "",
+        ctn: lineCartons(l) ? String(lineCartons(l)) : "", cno: cno.get(l.id)?.value || ""
+      } });
+    }
+  });
+  if (!rows.length) rows.push({ cells: { desc: "—" } });
+  else rows.push({ bold: true, fill: true, cells: {
+    desc: `TOTAL: ${pal.length} PALLET(S) / PACKAGE(S)${ctnTotal ? ` STC ${ctnTotal} ${word}` : ""}`,
+    ctn: ctnTotal ? String(ctnTotal) : "", net: w(netSum), gross: w(grossSum), vol: volSum != null ? fmtVolume(volSum) : ""
+  } });
   d.table(cols, rows);
 
   d.gap(8);
   const sm = [];
-  if (pal.length) sm.push(["Total Packages", `${pal.length}`]);
-  if (sum("net")) sm.push(["Net Weight", `${fmtWeight(sum("net"))} KG`]);
-  if (sum("gross")) sm.push(["Gross Weight", `${fmtWeight(sum("gross"))} KG`]);
-  if (anyVol) sm.push(["Volume", `${fmtVolume(vols.reduce((a, v) => a + (v || 0), 0))} M³`]);
+  if (pal.length) sm.push(["Total Pallets / Packages", `${pal.length}`]);
+  if (ctnTotal) sm.push([`Total ${title(word)}`, `${ctnTotal}`]);
+  if (netSum) sm.push(["Net Weight", `${fmtWeight(netSum)} KG`]);
+  if (grossSum) sm.push(["Gross Weight", `${fmtWeight(grossSum)} KG`]);
+  if (volSum != null) sm.push(["Volume", `${fmtVolume(volSum)} M³`]);
   const blocks = [], fr = [];
-  if (sm.length) { blocks.push(d.kv("Shipment summary", sm, 70)); fr.push(0.5); }
+  // Etiket sütunu en uzun etikete göre ("Total Pallets / Packages" 70 pt'ye sığmaz); sayılar biraz boşlukla sağda başlar
+  const keyW = Math.max(70, ...sm.map(([k]) => d.tw(k, "s", S.small))) + 16;
+  if (sm.length) { blocks.push(d.kv("Shipment summary", sm, keyW)); fr.push(0.5); }
   if (s.packing.marks) { blocks.push(d.cell({ label: "Marks & Numbers", lines: [{ text: s.packing.marks, color: C.ink }] })); fr.push(0.5); }
   if (blocks.length) d.row(blocks, fr.length === 1 ? [0.5] : fr);
   d.gap(6);
@@ -1495,9 +1534,11 @@ function labelList(s, T) {
   const origin = originLabel(s);
   if (lb.source === "pallets" && s.pallets.length) {
     const n = s.pallets.length;
-    return s.pallets.map((p, i) => ({
-      idx: p.no || String(i + 1), total: String(n), gross: num(p.gross), desc: p.contents, origin
-    }));
+    const items = new Map(s.items.map((it) => [it.id, it]));
+    return s.pallets.map((p, i) => {
+      const names = [...new Set(linkedLines(s, p).map((l) => items.get(l.itemId)?.description?.trim().replace(/\s*\n\s*/g, " ")).filter(Boolean))];
+      return { idx: p.no || String(i + 1), total: String(n), gross: palletWeight(s, p, "gross").value, desc: names.length ? names.join("; ") : p.contents, origin };
+    });
   }
   const n = Math.max(1, Math.round(num(lb.count) || T.packages || 1));
   const desc = [...new Set(s.items.map((it) => it.description.trim().replace(/\s*\n\s*/g, " ")).filter(Boolean))].join("; ");

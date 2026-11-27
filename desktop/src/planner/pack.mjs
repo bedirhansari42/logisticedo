@@ -55,6 +55,7 @@ class Bin {
     this.pointKeys = new Set(["0,0,0"]);
     this.usedVolume = 0;
     this.weight = 0;
+    this.version = 0; // her yerleşimde artar: "bu birim buraya sığmadı" bilgisi yalnız aynı sürümde geçerli
   }
 
   fits(px, py, pz, dx, dy, dz, pallet, circ = false, cyl = false) {
@@ -123,6 +124,7 @@ class Bin {
     const p = { itemId: item.id, x: pt.x, y: pt.y, z: pt.z, dx, dy, dz, pallet, seq: this.placements.length + 1 };
     if (isCyl(item)) { p.cyl = true; p.kind = cylKind(item, dx, dy, dz); if (circ) p.circ = true; }
     this.placements.push(p);
+    this.version++;
     const bx = Math.floor(p.x / BUCKET);
     this.grid[bx][Math.floor(p.y / BUCKET)].push(p);
     this.maxDx = Math.max(this.maxDx, dx);
@@ -200,9 +202,48 @@ const faceArea = (it) => (isCyl(it) ? Math.max(it.w * it.w, it.l * it.w) : it.pa
 /** Silindir varsa birkaç aday plan dener ve en iyisini döndürür: "yön fark etmez" kalemler için planlayıcının seçimi / hep dik / hep yatık,
  *  zikzak açık kalemler için zikzaklı / düz ızgara (zikzak her ölçüde kazandırmaz). Aday sırası eşitlikte ilk gelen kazanır. */
 export function planLoad(items, containerKey, opts = {}) {
+  const C = CONTAINERS[containerKey];
+  const { list, result } = bestCylVariant(items, containerKey, opts);
+  result.orders = ["group"];
+  // Kalemleri karışık dizme: aynı yük birkaç sırayla denenir, en çok istif yapan seçilir; eşitlikte bugünkü gruplu sıra kalır.
+  // Başka sıranın kazanamayacağı durumlarda denenmez: tek kalem, hesap sınırına takılmış, her şey tek konteynere sığmış.
+  const fixed = fixedOf(list);
+  if (fixed.length < 2 || result.capped) return result;
+  if (!result.fill && !result.unplaced.length && result.containers.length <= 1) return result;
+  const index = new Map(fixed.map((it, i) => [it, i]));
+  const seqKey = (order) => unitRuns(fixed, order).map((r) => index.get(r.item)).join(",");
+  const seen = new Set([seqKey("group")]), orders = ["group"];
+  let best = result;
+  for (const order of ORDERS.slice(1)) {
+    const k = seqKey(order);
+    if (seen.has(k)) continue; // aynı kalem dizisi aynı sonucu verir
+    seen.add(k); orders.push(order);
+    const r = planOnce(list, containerKey, { ...opts, order });
+    if (betterLoad(r, best, C)) best = r;
+  }
+  best.orders = orders;
+  return best;
+}
+
+/** Diziliş sırası karşılaştırması: sığmayan en az → konteyner en az → dolgu en çok → konteyner hacimleri sırayla en dolu.
+ *  Hacim farkı konteyner hacminin %1'inden azsa eşit sayılır (küçük kazanç için düzenli gruplu plan bozulmasın). */
+export function betterLoad(a, b, C) {
+  const count = (r) => [r.unplaced.reduce((n, u) => n + u.count, 0), r.containers.length, -(r.fill?.count ?? 0)];
+  const x = count(a), y = count(b);
+  for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] < y[i];
+  const tol = 0.01 * C.L * C.W * C.H;
+  for (let i = 0; i < a.containers.length; i++) {
+    const d = a.containers[i].usedVolumeCm3 - (b.containers[i]?.usedVolumeCm3 ?? 0);
+    if (Math.abs(d) >= tol) return d > 0;
+  }
+  return false;
+}
+
+/** Silindirli yüklerde yön/zikzak adaylarından en iyisi (gruplu sırayla); { list: kullanılan kalem listesi, result } */
+function bestCylVariant(items, containerKey, opts) {
   const flexible = items.some((it) => isCyl(it) && (it.orient || "any") === "any");
   const tightAny = items.some((it) => isCyl(it) && it.tight !== false);
-  if (!flexible && !tightAny) return planOnce(items, containerKey, opts);
+  if (!flexible && !tightAny) return { list: items, result: planOnce(items, containerKey, opts) };
   const variant = (orient, flat) => items.map((it) => {
     if (!isCyl(it)) return it;
     const o = { ...it };
@@ -212,13 +253,38 @@ export function planLoad(items, containerKey, opts = {}) {
   });
   const lists = [];
   for (const orient of flexible ? [null, "up", "lying"] : [null]) for (const flat of tightAny ? [false, true] : [false]) lists.push(variant(orient, flat));
-  const cands = lists.map((list) => planOnce(list, containerKey, opts));
+  const cands = lists.map((list) => ({ list, result: planOnce(list, containerKey, opts) }));
   const score = (r) => [r.unplaced.reduce((n, u) => n + u.count, 0), r.containers.length, -(r.fill?.count ?? 0)];
   const better = (a, b) => { const x = score(a), y = score(b); for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] < y[i]; return false; };
-  return cands.reduce((best, r) => (better(r, best) ? r : best));
+  return cands.reduce((best, c) => (better(c.result, best.result) ? c : best));
 }
 
-function planOnce(items, containerKey, opts = {}) {
+/** Diziliş sıraları: group = yalnız-zemin önce, ayak izi büyük önce (ilk aday, eşitlikte kazanır);
+ *  volume = birim hacmi büyükten küçüğe; height = yükseklik büyükten küçüğe (silindirde çap).
+ *  Kalemleri birer birer dönüşümlü dizmek denendi (2026-11-27): 240 rastgele yükün 13'ünde az farkla kazandı, hiç konteyner
+ *  kazandırmadı, hesabı ~10 kat uzattı → aday değil. Yalnız-zemin paletlerin önce gelmemesi asıl kazancı sağlıyor. */
+export const ORDERS = ["group", "volume", "height"];
+const unitVolume = (it) => (isCyl(it) ? Math.PI * (it.w / 2) ** 2 * it.l : it.l * it.w * it.h);
+const unitHeight = (it) => (isCyl(it) ? it.w : it.h);
+
+/** Adetli kalemler, gruplu sırada: yalnız-zemin önce, ayak izi büyük önce, eşitlikte girdi sırası */
+function fixedOf(items) {
+  return items
+    .map((it, i) => ({ it, i }))
+    .filter(({ it }) => it.qty !== null && it.qty > 0)
+    .sort((a, b) => (Number(floorOnly(b.it)) - Number(floorOnly(a.it))) || (faceArea(b.it) - faceArea(a.it)) || (a.i - b.i))
+    .map(({ it }) => it);
+}
+
+/** Kalemleri (gruplu sırada) yerleştirme dizisine çevirir: [{ item, n }] — n art arda konacak birim sayısı */
+function unitRuns(fixed, order) {
+  const byKey = (f) => fixed.map((it, i) => ({ it, i })).sort((a, b) => (f(b.it) - f(a.it)) || (a.i - b.i)).map(({ it }) => ({ item: it, n: it.qty }));
+  if (order === "volume") return byKey(unitVolume);
+  if (order === "height") return byKey(unitHeight);
+  return fixed.map((it) => ({ item: it, n: it.qty }));
+}
+
+export function planOnce(items, containerKey, opts = {}) {
   const C = CONTAINERS[containerKey];
   if (!C) throw new Error(`unknown container: ${containerKey}`);
   const gap = opts.gap || 0;
@@ -228,11 +294,7 @@ function planOnce(items, containerKey, opts = {}) {
 
   const fills = items.filter((it) => it.qty === null);
   if (fills.length > 1) throw new Error("only one fill item is allowed");
-  const fixed = items
-    .map((it, i) => ({ it, i }))
-    .filter(({ it }) => it.qty !== null && it.qty > 0)
-    .sort((a, b) => (Number(floorOnly(b.it)) - Number(floorOnly(a.it))) || (faceArea(b.it) - faceArea(a.it)) || (a.i - b.i))
-    .map(({ it }) => it);
+  const fixed = fixedOf(items);
 
   const bins = [];
   const unplaced = [];
@@ -244,24 +306,30 @@ function planOnce(items, containerKey, opts = {}) {
   let capped = false;
   const over = () => placedTotal >= maxUnits || budget.work > maxWork;
 
-  for (const item of fixed) {
+  const left = new Map(fixed.map((it) => [it, it.qty])); // kalem başına konmamış birim
+  const done = new Set(); // sığmayan/çok büyük: kalanı raporlandı
+  const failed = new Map(); // kalem → Map<konteyner sırası, sürüm>: o sürümde bu kalemin birimi sığmadı
+  for (const { item, n } of unitRuns(fixed, opts.order || "group")) {
+    if (done.has(item)) continue;
     const orients = orientationsOf(item);
-    if (!fitsEmpty(orients, C)) { addUnplaced(item.id, item.qty, "too_big"); continue; }
-    const failed = new Set();
-    for (let u = 0; u < item.qty; u++) {
-      if (over()) { addUnplaced(item.id, item.qty - u, "cap"); capped = true; break; }
+    if (!fitsEmpty(orients, C)) { addUnplaced(item.id, left.get(item), "too_big"); done.add(item); continue; }
+    if (!failed.has(item)) failed.set(item, new Map());
+    const miss = failed.get(item);
+    for (let u = 0; u < n; u++) {
+      if (over()) { addUnplaced(item.id, left.get(item), "cap"); capped = true; done.add(item); break; }
       let placed = null;
       for (let bi = 0; bi < bins.length && !placed; bi++) {
-        if (failed.has(bi)) continue;
+        if (miss.get(bi) === bins[bi].version) continue;
         placed = bins[bi].tryPlace(item, orients);
-        if (!placed) failed.add(bi);
+        if (!placed) miss.set(bi, bins[bi].version);
       }
       if (!placed) {
         const bin = new Bin(C, gap, bins.length, budget);
         bins.push(bin);
         placed = bin.tryPlace(item, orients);
       }
-      if (!placed) { addUnplaced(item.id, item.qty - u, "no_space"); break; }
+      if (!placed) { addUnplaced(item.id, left.get(item), "no_space"); done.add(item); break; }
+      left.set(item, left.get(item) - 1);
       placedTotal++;
     }
   }

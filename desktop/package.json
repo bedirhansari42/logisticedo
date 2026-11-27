@@ -26,7 +26,9 @@
     "test:net": "node --test *.test.js",
     "test:update": "node --test src/update/*.test.mjs",
     "test:tour": "node --test src/tour/*.test.mjs",
-    "test:bankedit": "node --test src/lib/bank-edit.test.mjs"
+    "test:bankedit": "node --test src/lib/bank-edit.test.mjs",
+    "test:req": "node --test src/requirements/*.test.mjs",
+    "test:pallets": "node --test src/pallets/*.test.mjs"
   },
   "build": {
     "appId": "com.logisticedo.desktop",

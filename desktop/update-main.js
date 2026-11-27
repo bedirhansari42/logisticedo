@@ -118,7 +118,7 @@ function register({
 
   ipcMain.handle("lgx:update:open", async (e, url) => {
     if (!isTrusted(e) || typeof url !== "string" || !isReleaseUrl(url)) return false;
-    await shell.openExternal(url);
+    await shell.openExternal(new URL(url).href); // ayrıştırılmış, kurallı adres
     return true;
   });
 }
