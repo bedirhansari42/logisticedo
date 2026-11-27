@@ -45,7 +45,7 @@ test("suggested qty from cartons; an entered qty wins", () => {
   const s = st([item({ id: "a", qty: "50", packages: "5" }), item({ id: "b", qty: "10", packages: "3" })]);
   assert.deepEqual(P.lineQty(s, line("a", 2)), { value: 20, suggested: true });
   assert.deepEqual(P.lineQty(s, line("a", 2, 7)), { value: 7, suggested: false });
-  assert.deepEqual(P.lineQty(s, line("b", 1)), { value: 3.333, suggested: true });
+  assert.deepEqual(P.lineQty(s, line("b", 1)), { value: 3, suggested: true });
 });
 
 test("suggested pallet weights from item shares; an entered weight wins", () => {
@@ -184,4 +184,93 @@ test("fillRemaining clears a typed qty when it raises cartons, so the suggestion
   P.fillRemaining(s, p.id);
   assert.deepEqual([p.lines[0].cartons, p.lines[0].qty], ["5", ""]);
   assert.equal(P.allocation(s)[0].status, "ok");
+});
+
+// ---- Ertelenen küçükler (2026-11-27) ----
+
+test("suggested quantities add up to the item total despite rounding", () => {
+  const items = [item({ id: "a", qty: "10", packages: "3" })];
+  const s = st(items, [pal([line("a", 1, "", "l1")]), pal([line("a", 1, "", "l2")]), pal([line("a", 1, "", "l3")])]);
+  const qs = s.pallets.map((p) => P.lineQty(s, p.lines[0]).value);
+  assert.deepEqual(qs, [3, 4, 3]);
+  assert.equal(P.allocation(s)[0].status, "ok");
+  assert.equal(P.palletStatus(s), "ready");
+});
+
+test("suggested pallet weights add up to the item weight despite rounding", () => {
+  const items = [item({ id: "a", qty: "3", packages: "3", netWeight: "10", grossWeight: "10" })];
+  const s = st(items, [pal([line("a", 1)]), pal([line("a", 1)]), pal([line("a", 1)])]);
+  const ws = s.pallets.map((p) => P.palletWeight(s, p, "net").value);
+  assert.deepEqual(ws, [3.33, 3.34, 3.33]);
+});
+
+test("description-only heading rows are not reported as missing from pallets", () => {
+  const items = [item({ id: "h", description: "SECTION A" }), item({ id: "a", qty: "5", packages: "5" })];
+  const s = st(items, [pal([line("a", 5)])]);
+  assert.deepEqual(P.allocation(s).map((r) => r.itemId), ["a"]);
+  assert.equal(P.palletStatus(s), "ready");
+});
+
+test("fractional cartons are invalid, not silently rounded", () => {
+  assert.equal(P.lineCartons({ cartons: "2.5" }), null);
+  assert.equal(P.lineCartons({ cartons: "3" }), 3);
+  const items = [item({ id: "a", qty: "50", packages: "5" })];
+  assert.equal(P.allocation(st(items, [pal([line("a", "4.6")])]))[0].status, "under");
+});
+
+test("input cleaners: cartons are whole numbers, amounts never negative", () => {
+  assert.equal(P.cleanCartons("2.5"), "25");
+  assert.equal(P.cleanCartons("-3a"), "3");
+  assert.equal(P.cleanAmount("-12,5kg"), "12,5");
+  assert.equal(P.cleanAmount("1.250"), "1.250");
+});
+
+test("negative typed values are ignored and the suggestion takes over", () => {
+  const items = [item({ id: "a", qty: "50", packages: "5", netWeight: "100" })];
+  const p = pal([line("a", 2, "-5")], { net: "-3" });
+  const s = st(items, [p]);
+  assert.deepEqual(P.lineQty(s, p.lines[0]), { value: 20, suggested: true });
+  assert.deepEqual(P.palletWeight(s, p, "net"), { value: 40, suggested: true });
+});
+
+test("a line whose item row was emptied is an orphan and is not printed", () => {
+  const items = [item({ id: "a", description: "", qty: "" }), item({ id: "b", qty: "2", packages: "2" })];
+  const p = pal([line("a", 1, "", "la"), line("b", 2, "", "lb")]);
+  const s = st(items, [p]);
+  assert.deepEqual(P.orphanLines(s), ["la"]);
+  assert.deepEqual(P.linkedLines(s, p).map((l) => l.id), ["lb"]);
+  assert.equal(P.cartonNumbers(s).has("la"), false);
+  assert.equal(P.cartonNumbers(s).get("lb"), "1-2");
+});
+
+test("palletIsBlank: only an untouched pallet can be removed without asking", () => {
+  assert.equal(P.palletIsBlank(newPallet({ no: "3" })), true);
+  assert.equal(P.palletIsBlank(newPallet({ gross: "120" })), false);
+  assert.equal(P.palletIsBlank(newPallet({ dimensions: "120x80x150" })), false);
+  assert.equal(P.palletIsBlank(newPallet({ contents: "fragile" })), false);
+  assert.equal(P.palletIsBlank(newPallet({ lines: [line("a", 1)] })), false);
+});
+
+test("itemRemaining tells what is left of an item", () => {
+  const items = [item({ id: "a", qty: "50", packages: "5" }), item({ id: "b", qty: "7" })];
+  const s = st(items, [pal([line("a", 3), line("b", "", 2)])]);
+  assert.deepEqual(P.itemRemaining(s, items[0]), { cartons: 2 });
+  assert.deepEqual(P.itemRemaining(s, items[1]), { qty: 5 });
+});
+
+test("palletTypeWord prints one pallet's type in the singular", () => {
+  const w = P.palletTypeWord;
+  assert.deepEqual(["PALLETS", "cartons", "BOXES", "CRATES", "CASES", "PIECES", "BUNDLES", "PALLET", "GLASS", " skids ", ""].map(w),
+    ["PALLET", "CARTON", "BOX", "CRATE", "CASE", "PIECE", "BUNDLE", "PALLET", "GLASS", "SKID", ""]);
+});
+
+test("a whole-number item quantity gets whole-number suggestions; a fractional one keeps 3 decimals", () => {
+  const three = (qty) => {
+    const s = st([item({ id: "a", qty, packages: "3" })], [1, 2, 3].map(() => pal([line("a", 1)])));
+    return s.pallets.map((p) => P.lineQty(s, p.lines[0]).value);
+  };
+  assert.deepEqual(three("10"), [3, 4, 3]);
+  assert.deepEqual(three("1000"), [333, 334, 333]);
+  assert.deepEqual(three("10.1"), [3.367, 3.366, 3.367]);
+  assert.deepEqual(three("2"), [1, 0, 1]);
 });

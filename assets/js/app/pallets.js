@@ -5,6 +5,8 @@ import { num, round, uid, toInput, newPallet, newPalletLine } from "./doc-model.
 
 const n = (v) => { const x = num(v); return Number.isFinite(x) ? x : null; };
 const pos = (v) => { const x = n(v); return x != null && x > 0 ? x : null; };
+/** Elle girilen miktar/ağırlık: eksi değer girilmemiş sayılır (öneri devralır) */
+const nonneg = (v) => { const x = n(v); return x != null && x >= 0 ? x : null; };
 const str = (v) => (v == null ? "" : typeof v === "string" ? v : String(v));
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
 const tidy = (v) => (Math.abs(v - Math.round(v)) < 1e-9 ? Math.round(v) : round(v, 3));
@@ -12,8 +14,33 @@ const tidy = (v) => (Math.abs(v - Math.round(v)) < 1e-9 ? Math.round(v) : round(
 /** Belgeye basılan (dolu) kalemler: açıklaması ya da miktarı olanlar */
 export const realItems = (s) => (s.items || []).filter((it) => it.description || it.qty);
 const itemMap = (s) => new Map((s.items || []).map((it) => [it.id, it]));
-/** Satırın kap sayısı (tam sayı, > 0) ya da null */
-export const lineCartons = (line) => { const c = pos(line.cartons); return c == null ? null : Math.round(c) || null; };
+/** Yalnız dolu kalemler: içeriği boşaltılmış kalemin satırı sahipsiz sayılır, basılmaz */
+const realMap = (s) => new Map(realItems(s).map((it) => [it.id, it]));
+/** Dağıtılacak kalemler: miktarı ya da kap sayısı olanlar (yalnız açıklamalı başlık satırları sayılmaz) */
+const measurable = (it) => n(it.qty) != null || pos(it.packages) != null;
+/** Satırın kap sayısı (tam sayı, > 0) ya da null; küsuratlı kap geçersizdir (yuvarlanmaz) */
+export const lineCartons = (line) => { const c = pos(line.cartons); return c != null && Number.isInteger(c) ? c : null; };
+
+/** Form girişi temizleyicileri: kap sayısı yalnız rakam, miktar/ağırlık rakam ve ondalık ayırıcı (eksi yok) */
+export const cleanCartons = (raw) => str(raw).replace(/\D/g, "");
+export const cleanAmount = (raw) => str(raw).replace(/[^\d.,]/g, "");
+
+/** Hiç dokunulmamış palet (içerik, ölçü, ağırlık, not yok): sorulmadan silinebilir */
+export const palletIsBlank = (p) => !(p.lines || []).length && ![p.dimensions, p.net, p.gross, p.contents].some((v) => str(v).trim());
+
+/** Palet cinsinin tekil hâli (başlık satırı "PALLET 1" için): PALLETS → PALLET, BOXES → BOX, GLASS → GLASS */
+export function palletTypeWord(type) {
+  const t = str(type).trim().toUpperCase();
+  if (/(X|CH|SH|SS)ES$/.test(t)) return t.slice(0, -2);
+  if (/[^S]S$/.test(t)) return t.slice(0, -1);
+  return t;
+}
+
+/** Paletin belgeye basılan satırları (kalemi dolu olanlar) */
+export function linkedLines(s, p) {
+  const items = realMap(s);
+  return (p.lines || []).filter((l) => items.has(l.itemId));
+}
 
 /** Kayıttan/yedekten gelen palet listesini güncel şekle getirir; bozuk paletler ve satırlar düşer, eski içerik metni korunur */
 export function normalizePallets(raw) {
@@ -29,11 +56,17 @@ export function normalizePallets(raw) {
 
 /** Satırın miktarı: girilen; yoksa kalemin miktarından kap payıyla önerilen */
 export function lineQty(s, line, item = itemMap(s).get(line.itemId)) {
-  const q = n(line.qty);
+  const q = nonneg(line.qty);
   if (q != null) return { value: q, suggested: false };
   const iq = n(item?.qty), pk = pos(item?.packages), c = lineCartons(line);
-  if (iq != null && pk && c) return { value: tidy((iq * c) / pk), suggested: true };
-  return { value: null, suggested: false };
+  if (iq == null || !pk || !c) return { value: null, suggested: false };
+  // Kalemin önerilen satırları sırayla birikimli yuvarlanır: hepsi dağıtılınca toplam kalem miktarını tam tutar.
+  // Kalem miktarı tam sayıysa (adet gibi) öneriler de tam sayı, değilse 3 ondalık.
+  const ls = linesOf(s, item.id), at = ls.findIndex((l) => l.id === line.id);
+  const before = ls.slice(0, Math.max(0, at)).reduce((a, l) => a + (nonneg(l.qty) == null ? lineCartons(l) || 0 : 0), 0);
+  const dec = Number.isInteger(iq) ? 0 : 3;
+  const cum = (k) => round((iq * k) / pk, dec);
+  return { value: tidy(cum(before + c) - cum(before)), suggested: true };
 }
 
 /** Satırın kalemden payı (0..1+): kap oranı, yoksa miktar oranı */
@@ -46,24 +79,38 @@ function share(s, line, item) {
 
 /** Palet ağırlığı (kind: "net" | "gross"): girilen; yoksa satırların kalem ağırlığından payı */
 export function palletWeight(s, p, kind) {
-  const v = n(p[kind]);
+  const v = nonneg(p[kind]);
   if (v != null) return { value: v, suggested: false };
-  const items = itemMap(s);
+  const items = realMap(s);
   const field = kind === "net" ? "netWeight" : "grossWeight";
-  let sum = 0, any = false;
-  for (const l of p.lines || []) {
-    const it = items.get(l.itemId);
-    if (!it) continue;
-    const sh = share(s, l, it), w = n(it[field]);
-    if (sh == null || w == null) continue;
-    sum += sh * w; any = true;
+  /** Paletin kalem kalem yuvarlanmamış ağırlık payı */
+  const parts = (q) => {
+    const m = new Map();
+    for (const l of q.lines || []) {
+      const it = items.get(l.itemId);
+      if (!it) continue;
+      const sh = share(s, l, it), w = n(it[field]);
+      if (sh == null || w == null) continue;
+      m.set(it.id, (m.get(it.id) || 0) + sh * w);
+    }
+    return m;
+  };
+  const mine = parts(p);
+  if (!mine.size) return { value: null, suggested: false };
+  // Önceki önerili paletlerin payı: kalem başına birikimli yuvarlama, önerilerin toplamı kalem ağırlığını tam tutar
+  const pals = s.pallets || [], at = pals.findIndex((q) => q.id === p.id), before = new Map();
+  for (const q of pals.slice(0, Math.max(0, at))) {
+    if (nonneg(q[kind]) != null) continue;
+    for (const [k, x] of parts(q)) before.set(k, (before.get(k) || 0) + x);
   }
-  return any ? { value: round(sum, 2), suggested: true } : { value: null, suggested: false };
+  let sum = 0;
+  for (const [k, x] of mine) { const b = before.get(k) || 0; sum += round(b + x, 2) - round(b, 2); }
+  return { value: round(sum, 2), suggested: true };
 }
 
 /** Kap numaraları (C/No.): paletler boyunca süren aralıklar. Map<satır kimliği, "1-5" | "6"> */
 export function cartonNumbers(s) {
-  const items = itemMap(s), out = new Map();
+  const items = realMap(s), out = new Map();
   let k = 0;
   for (const p of s.pallets || []) for (const l of p.lines || []) {
     const c = items.has(l.itemId) ? lineCartons(l) : null;
@@ -79,7 +126,7 @@ const linesOf = (s, itemId) => (s.pallets || []).flatMap((p) => (p.lines || []).
 /** Kalem başına dağıtım: kap ve miktar toplamı ↔ paletlere konan. Kaplar tutsa bile miktar tutmuyorsa o da bildirilir
     (basis: uyuşmazlığın hangi sayıda olduğu — "cartons" | "qty"). */
 export function allocation(s) {
-  return realItems(s).map((it) => {
+  return realItems(s).filter(measurable).map((it) => {
     const ls = linesOf(s, it.id);
     const cartons = { total: pos(it.packages) != null ? Math.round(pos(it.packages)) : null, assigned: ls.reduce((a, l) => a + (lineCartons(l) || 0), 0) };
     const qty = { total: n(it.qty), assigned: round(ls.reduce((a, l) => a + (lineQty(s, l, it).value || 0), 0), 6) };
@@ -95,9 +142,9 @@ export function allocation(s) {
   });
 }
 
-/** Kalemi silinmiş satırların kimlikleri */
+/** Kalemi silinmiş ya da içeriği boşaltılmış satırların kimlikleri */
 export function orphanLines(s) {
-  const items = itemMap(s);
+  const items = realMap(s);
   return (s.pallets || []).flatMap((p) => (p.lines || []).filter((l) => !items.has(l.itemId)).map((l) => l.id));
 }
 
@@ -116,8 +163,9 @@ export function packageWord(s) {
 }
 
 /** Kalemin henüz palete konmamış kısmı: { cartons } ya da { qty } (kap sayısı yoksa) */
-function remaining(s, it) {
+export function itemRemaining(s, it) {
   const a = allocation({ ...s, items: [it] })[0];
+  if (!a) return {};
   if (a.cartons.total != null) return { cartons: Math.max(0, a.cartons.total - a.cartons.assigned) };
   if (a.qty.total != null) return { qty: Math.max(0, round(a.qty.total - a.qty.assigned, 6)) };
   return {};
@@ -138,7 +186,7 @@ export function fillRemaining(s, palletId) {
   if (!p) return 0;
   let count = 0;
   for (const it of realItems(s)) {
-    const r = remaining(s, it);
+    const r = itemRemaining(s, it);
     const key = r.cartons ? "cartons" : r.qty ? "qty" : null;
     if (!key) continue;
     const cur = p.lines.find((l) => l.itemId === it.id);
@@ -155,6 +203,6 @@ export function addItemLine(s, palletId, itemId) {
   const p = (s.pallets || []).find((x) => x.id === palletId);
   const it = (s.items || []).find((x) => x.id === itemId);
   if (!p || !it) return;
-  const r = remaining(s, it);
+  const r = itemRemaining(s, it);
   p.lines.push(newPalletLine({ itemId, ...(r.cartons ? { cartons: String(r.cartons) } : r.qty ? { qty: toInput(r.qty) } : {}) }));
 }

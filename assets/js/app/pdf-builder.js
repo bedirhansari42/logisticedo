@@ -2,7 +2,7 @@
    Koordinatlar yukarıdan aşağıya (yTop) tutulur, çizimde pdf-lib düzlemine çevrilir. */
 import { loadPdfLib, loadDocFonts } from "./loader.js";
 import { focReasonText } from "./foc.js";
-import { cartonNumbers, lineQty, lineCartons, palletWeight, packageWord } from "./pallets.js";
+import { cartonNumbers, lineQty, lineCartons, palletWeight, packageWord, linkedLines, palletTypeWord } from "./pallets.js";
 import {
   computeTotals, itemCurrency, itemVatRate, num, lineAmount, fmtMoney, fmtPrice, fmtQty, fmtWeight, fmtVolume, fmtDate,
   amountInWords, packagesInWords, itemPackageType, packagesText, DEFAULT_ORIGIN_STATEMENT, DEFAULT_ORIGIN_STATEMENT_MIXED, DEFAULT_PROFORMA_DECLARATION, itemOrigin, originList, palletVolume
@@ -1204,7 +1204,7 @@ function renderPalletList(ctx, s) {
   const pal = s.pallets;
   const items = new Map(s.items.map((it) => [it.id, it]));
   const cno = cartonNumbers(s);
-  const linked = (p) => (p.lines || []).filter((l) => items.has(l.itemId));
+  const linked = (p) => linkedLines(s, p);
   const allLines = pal.flatMap(linked);
   const vols = pal.map((p) => palletVolume(p));
   const nets = pal.map((p) => palletWeight(s, p, "net").value);
@@ -1231,7 +1231,7 @@ function renderPalletList(ctx, s) {
   const w = (v) => (v == null ? "" : fmtWeight(v));
   const rows = [];
   pal.forEach((p, i) => {
-    rows.push({ bold: true, fill: true, cells: { no: [(p.type || "").toUpperCase(), p.no || String(i + 1)].filter(Boolean).join(" "), dims: p.dimensions, net: w(nets[i]), gross: w(grosses[i]), vol: vols[i] != null ? fmtVolume(vols[i]) : "" } });
+    rows.push({ bold: true, fill: true, cells: { no: [palletTypeWord(p.type), p.no || String(i + 1)].filter(Boolean).join(" "), dims: p.dimensions, net: w(nets[i]), gross: w(grosses[i]), vol: vols[i] != null ? fmtVolume(vols[i]) : "" } });
     if (String(p.contents || "").trim()) rows.push({ cells: { desc: p.contents } });
     for (const l of linked(p)) {
       const it = items.get(l.itemId);
@@ -1531,7 +1531,7 @@ function labelList(s, T) {
     const n = s.pallets.length;
     const items = new Map(s.items.map((it) => [it.id, it]));
     return s.pallets.map((p, i) => {
-      const names = [...new Set((p.lines || []).map((l) => items.get(l.itemId)?.description?.trim().replace(/\s*\n\s*/g, " ")).filter(Boolean))];
+      const names = [...new Set(linkedLines(s, p).map((l) => items.get(l.itemId)?.description?.trim().replace(/\s*\n\s*/g, " ")).filter(Boolean))];
       return { idx: p.no || String(i + 1), total: String(n), gross: palletWeight(s, p, "gross").value, desc: names.length ? names.join("; ") : p.contents, origin };
     });
   }
